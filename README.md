@@ -102,6 +102,33 @@ Cria e mantém a tabela de classificação atualizada.
 
 ---
 
+## 🌿 Branches
+
+Cada responsável trabalha na sua própria branch e passar para `main` quando o módulo estiver pronto.
+
+| Branch | Responsável | Conteúdo |
+|--------|-------------|----------|
+| `main` | — | Código estável e integrado |
+| `modulo/times` | Julia Kymie Dias Okada | `times.py` + `test_times.py` |
+| `modulo/partidas` | Lucas Manoel Martins de Souza | `partidas.py` + `test_partidas.py` |
+| `modulo/torneios` | Pedro Henrique Vargas Mucelin | `torneios.py` + `test_torneios.py` |
+| `modulo/ranking` | Maria Eduarda Fonte de Macedo | `ranking.py` + `test_ranking.py` |
+| `front` | Julia Kymie Dias Okada e Lucas Manoel Martins de Souza | `main.py` + `templates/` |
+
+### Fluxo de trabalho
+
+```bash
+# Criar e entrar na sua branch (exemplo para times)
+git checkout -b modulo/times
+
+# Trabalhar normalmente, commitar e subir
+git add times.py test_times.py
+git commit -m "feat: implementa módulo times"
+git push origin modulo/times
+```
+
+---
+
 ## ✅ Executando os Testes
 
 Cada módulo (exceto o principal) possui seu próprio módulo testador. Para executar todos os testes:
