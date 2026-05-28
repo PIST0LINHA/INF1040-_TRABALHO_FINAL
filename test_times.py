@@ -124,7 +124,7 @@ def executar_testes():
             nome = teste.__name__.replace("teste_", "").replace("_", " ")
             registrar(nome, False, f"Exceção: {e}")
 
-    print("\n=== Relatório de Testes — times.py ===\n")
+    print("\nRelatório de Testes — times.py\n")
     passaram = 0
     falharam = 0
     for r in resultados:
