@@ -12,8 +12,10 @@ def criar_time(nome, jogadores):
         if time["nome"].lower() == nome.strip().lower():
             return f"Erro: já existe um time com o nome '{nome}'."
 
+    id_time = str(_proximo_id)
+
     novo_time = {
-        "id": str(_proximo_id),
+        "id": id_time,
         "nome": nome.strip(),
         "jogadores": jogadores if jogadores is not None else [],
     }
