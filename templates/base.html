@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block titulo %}Simulador de Torneios{% endblock %}</title>
+</head>
+<body>
+    <nav>
+        <a href="/">Inicio</a> |
+        <a href="/times">Times</a> |
+        <a href="/partidas">Partidas</a> |
+        <a href="/torneio">Torneio</a> |
+        <a href="/ranking">Ranking</a>
+    </nav>
+    <hr>
+    {% block conteudo %}{% endblock %}
+</body>
+</html>
