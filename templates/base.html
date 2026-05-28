@@ -4,16 +4,173 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block titulo %}Simulador de Torneios{% endblock %}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7ff;
+            color: #222;
+        }
+
+        nav {
+            background: linear-gradient(135deg, #6c3fc5, #3b82f6);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            box-shadow: 0 4px 12px rgba(108, 63, 197, 0.4);
+        }
+
+        nav .nav-brand {
+            color: #fff;
+            font-size: 1.25rem;
+            font-weight: 800;
+            padding: 0.9rem 1.2rem 0.9rem 0;
+            margin-right: 0.75rem;
+            text-decoration: none;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            border-right: 2px solid rgba(255,255,255,0.3);
+        }
+
+        nav a {
+            color: rgba(255,255,255,0.85);
+            text-decoration: none;
+            padding: 0.9rem 1rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: background 0.2s, color 0.2s;
+            border-radius: 6px;
+        }
+
+        nav a:hover {
+            background: rgba(255,255,255,0.2);
+            color: #fff;
+        }
+
+        nav a.ativo {
+            background: rgba(255,255,255,0.25);
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        .page-title {
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            color: #3b1fa3;
+            font-weight: 700;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.07);
+            margin-bottom: 1.5rem;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.55rem 1.3rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .btn-primario { background: linear-gradient(135deg, #6c3fc5, #3b82f6); color: #fff; }
+        .btn-secundario { background-color: #6b7280; color: #fff; }
+        .btn-perigo { background-color: #ef4444; color: #fff; }
+        .btn-sucesso { background-color: #22c55e; color: #fff; }
+        .btn-aviso { background-color: #f59e0b; color: #fff; }
+
+        .alerta {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .alerta-erro { background-color: #fee2e2; color: #991b1b; border-left: 4px solid #ef4444; }
+        .alerta-sucesso { background-color: #dcfce7; color: #166534; border-left: 4px solid #22c55e; }
+        .alerta-info { background-color: #dbeafe; color: #1e40af; border-left: 4px solid #3b82f6; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        table th {
+            background: linear-gradient(135deg, #6c3fc5, #3b82f6);
+            color: #fff;
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        table td {
+            padding: 0.65rem 1rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        table tr:hover td { background-color: #f5f3ff; }
+
+        form label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+            color: #4b5563;
+        }
+
+        form input, form select {
+            width: 100%;
+            padding: 0.55rem 0.85rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        form input:focus, form select:focus {
+            outline: none;
+            border-color: #6c3fc5;
+        }
+    </style>
 </head>
 <body>
     <nav>
-        <a href="/">Inicio</a> |
-        <a href="/times">Times</a> |
-        <a href="/partidas">Partidas</a> |
-        <a href="/torneio">Torneio</a> |
-        <a href="/ranking">Ranking</a>
+        <a href="/" class="nav-brand">&#127942; Torneios</a>
+        <a href="/" {% if request.path == '/' %}class="ativo"{% endif %}>Início</a>
+        <a href="/times" {% if request.path.startswith('/times') %}class="ativo"{% endif %}>Times</a>
+        <a href="/partidas" {% if request.path.startswith('/partidas') %}class="ativo"{% endif %}>Partidas</a>
+        <a href="/torneio" {% if request.path.startswith('/torneio') %}class="ativo"{% endif %}>Torneio</a>
+        <a href="/ranking" {% if request.path.startswith('/ranking') %}class="ativo"{% endif %}>Ranking</a>
     </nav>
-    <hr>
-    {% block conteudo %}{% endblock %}
+
+    <div class="container">
+        {% block conteudo %}{% endblock %}
+    </div>
 </body>
 </html>
