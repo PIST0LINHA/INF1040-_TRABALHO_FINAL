@@ -20,7 +20,14 @@ def index():
 @app.route("/times")
 def pagina_times():
     todos_times = times.listar_times()
-    return render_template("times.html", times=todos_times)
+    msg = request.args.get("msg", "")
+    tipo = request.args.get("tipo", "")
+    busca_id = request.args.get("busca_id", "").strip()
+    resultado_busca = None
+    if busca_id:
+        resultado_busca = times.buscar_time(busca_id)
+    return render_template("times.html", times=todos_times, msg=msg, tipo=tipo,
+                           busca_id=busca_id, resultado_busca=resultado_busca)
 
 
 @app.route("/times/criar", methods=["POST"])
@@ -29,13 +36,17 @@ def criar_time():
     jogadores_raw = request.form.get("jogadores", "").strip()
     jogadores = [j.strip() for j in jogadores_raw.split(",") if j.strip()] if jogadores_raw else []
     resultado = times.criar_time(nome, jogadores)
-    return redirect(url_for("pagina_times"))
+    if isinstance(resultado, dict):
+        return redirect(url_for("pagina_times", msg=f"Time '{resultado['nome']}' criado com sucesso.", tipo="sucesso"))
+    return redirect(url_for("pagina_times", msg=resultado, tipo="erro"))
 
 
 @app.route("/times/remover/<identificador>")
 def remover_time(identificador):
-    times.remover_time(identificador)
-    return redirect(url_for("pagina_times"))
+    resultado = times.remover_time(identificador)
+    if resultado.startswith("Erro"):
+        return redirect(url_for("pagina_times", msg=resultado, tipo="erro"))
+    return redirect(url_for("pagina_times", msg=resultado, tipo="sucesso"))
 
 
 @app.route("/partidas")
