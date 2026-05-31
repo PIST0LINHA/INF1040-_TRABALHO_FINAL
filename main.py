@@ -8,7 +8,6 @@ import ranking
 app = Flask(__name__)
 
 lista_partidas = []
-tabela_ranking = []
 confrontos_atuais = []
 
 
@@ -64,17 +63,18 @@ def gerar_confrontos():
     global confrontos_atuais
     todos_times = times.listar_times()
     nomes = [t["nome"] for t in todos_times]
+    ranking.criar_tabela(nomes) 
     confrontos_atuais = torneios.gerar_confronto(nomes)
     return redirect(url_for("pagina_torneio"))
 
 
 @app.route("/torneio/iniciar", methods=["POST"])
 def iniciar_rodada():
-    global lista_partidas, tabela_ranking
+    global lista_partidas
     resultados = torneios.iniciar_rodada(confrontos_atuais)
     for resultado in resultados:
         lista_partidas.append(resultado)
-        tabela_ranking = ranking.atualizar_pontos(tabela_ranking, resultado)
+        ranking.atualizar_pontos(resultado)
     return redirect(url_for("pagina_torneio"))
 
 
@@ -88,16 +88,17 @@ def avancar_fase():
 
 @app.route("/torneio/reiniciar", methods=["POST"])
 def reiniciar_torneio():
-    global lista_partidas, tabela_ranking, confrontos_atuais
+    global lista_partidas, confrontos_atuais
     lista_partidas = []
-    tabela_ranking = []
     confrontos_atuais = []
+    nomes = [t["nome"] for t in times.listar_times()]
+    ranking.criar_tabela(nomes)
     return redirect(url_for("pagina_torneio"))
 
 
 @app.route("/ranking")
 def pagina_ranking():
-    classificacao = ranking.ordenar_classificacao(tabela_ranking)
+    classificacao = ranking.ordenar_classificacao()
     return render_template("ranking.html", classificacao=classificacao)
 
 
