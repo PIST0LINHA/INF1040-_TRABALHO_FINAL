@@ -19,12 +19,12 @@ def criar_tabela(lista_times: list[str]) -> int:
 
 
 def atualizar_pontos(resultado: dict) -> int:
-    gols_casa = resultado['gols_casa']
-    gols_fora = resultado['gols_fora']
+    gols_casa = resultado['gols_time1']
+    gols_fora = resultado['gols_time2']
     encontrado = False
 
     for time in _tabela:
-        if time['time'] == resultado['time_casa']:
+        if time['time'] == resultado['time1']:
             encontrado = True
             time['jogos']       += 1
             time['gols_pro']    += gols_casa
@@ -38,7 +38,7 @@ def atualizar_pontos(resultado: dict) -> int:
                 time['pontos']   += 1
             else:
                 time['derrotas'] += 1
-        elif time['time'] == resultado['time_fora']:
+        elif time['time'] == resultado['time2']:
             encontrado = True
             time['jogos']       += 1
             time['gols_pro']    += gols_fora
@@ -52,7 +52,7 @@ def atualizar_pontos(resultado: dict) -> int:
                 time['pontos']   += 1
             else:
                 time['derrotas'] += 1
-    return 0 if encontrado else 1  
+    return 0 if encontrado else 1
    
 
 def ordenar_classificacao():

@@ -44,10 +44,10 @@ def teste_criar_tabela_lista_vazia():
 
 # ==================== atualizar_pontos ====================
 
-def teste_atualizar_pontos_vitoria_time_casa():
+def teste_atualizar_pontos_vitoria_time1():
     ranking.criar_tabela(['Flamengo', 'Vasco'])
-    ranking.atualizar_pontos({'time_casa': 'Flamengo', 'gols_casa': 2,
-                               'time_fora': 'Vasco',    'gols_fora': 0})
+    ranking.atualizar_pontos({'time1': 'Flamengo', 'gols_time1': 2,
+                               'time2': 'Vasco',    'gols_time2': 0})
     relacao  = ranking.ordenar_classificacao()
     flamengo = next(t for t in relacao if t['time'] == 'Flamengo')
     vasco    = next(t for t in relacao if t['time'] == 'Vasco')
@@ -61,8 +61,8 @@ def teste_atualizar_pontos_vitoria_time_casa():
 
 def teste_atualizar_pontos_vitoria_time_fora():
     ranking.criar_tabela(['Flamengo', 'Vasco'])
-    ranking.atualizar_pontos({'time_casa': 'Flamengo', 'gols_casa': 0,
-                               'time_fora': 'Vasco',    'gols_fora': 7})
+    ranking.atualizar_pontos({'time1': 'Flamengo', 'gols_time1': 0,
+                               'time2': 'Vasco',    'gols_time2': 7})
     relacao  = ranking.ordenar_classificacao()
     flamengo = next(t for t in relacao if t['time'] == 'Flamengo')
     vasco    = next(t for t in relacao if t['time'] == 'Vasco')
@@ -76,8 +76,8 @@ def teste_atualizar_pontos_vitoria_time_fora():
 
 def teste_atualizar_pontos_empate():
     ranking.criar_tabela(['Flamengo', 'Vasco'])
-    ranking.atualizar_pontos({'time_casa': 'Flamengo', 'gols_casa': 1,
-                               'time_fora': 'Vasco',    'gols_fora': 1})
+    ranking.atualizar_pontos({'time1': 'Flamengo', 'gols_time1': 1,
+                               'time2': 'Vasco',    'gols_time2': 1})
     relacao  = ranking.ordenar_classificacao()
     flamengo = next(t for t in relacao if t['time'] == 'Flamengo')
     vasco    = next(t for t in relacao if t['time'] == 'Vasco')
@@ -91,8 +91,8 @@ def teste_atualizar_pontos_empate():
 
 def teste_atualizar_pontos_gols_contabilizados():
     ranking.criar_tabela(['Flamengo', 'Vasco'])
-    ranking.atualizar_pontos({'time_casa': 'Flamengo', 'gols_casa': 3,
-                               'time_fora': 'Vasco',    'gols_fora': 1})
+    ranking.atualizar_pontos({'time1': 'Flamengo', 'gols_time1': 3,
+                               'time2': 'Vasco',    'gols_time2': 1})
     relacao  = ranking.ordenar_classificacao()
     flamengo = next(t for t in relacao if t['time'] == 'Flamengo')
     vasco    = next(t for t in relacao if t['time'] == 'Vasco')
@@ -106,10 +106,10 @@ def teste_atualizar_pontos_gols_contabilizados():
 
 def teste_atualizar_pontos_acumulativo():
     ranking.criar_tabela(['Flamengo', 'Vasco'])
-    ranking.atualizar_pontos({'time_casa': 'Flamengo', 'gols_casa': 2,
-                               'time_fora': 'Vasco',    'gols_fora': 0})
-    ranking.atualizar_pontos({'time_casa': 'Flamengo', 'gols_casa': 1,
-                               'time_fora': 'Vasco',    'gols_fora': 1})
+    ranking.atualizar_pontos({'time1': 'Flamengo', 'gols_time1': 2,
+                               'time2': 'Vasco',    'gols_time2': 0})
+    ranking.atualizar_pontos({'time1': 'Flamengo', 'gols_time1': 1,
+                               'time2': 'Vasco',    'gols_time2': 1})
     relacao  = ranking.ordenar_classificacao()
     flamengo = next(t for t in relacao if t['time'] == 'Flamengo')
     passou = (
@@ -127,14 +127,14 @@ def teste_atualizar_pontos_acumulativo():
 def teste_ordenar_classificacao_por_pontos():
     ranking.criar_tabela(['Flamengo', 'Vasco', 'Fluminense'])
     # fluminense venceu os 3 jogos - 9 pts
-    ranking.atualizar_pontos({'time_casa': 'Fluminense', 'gols_casa': 1, 'time_fora': 'Flamengo', 'gols_fora': 0})
-    ranking.atualizar_pontos({'time_casa': 'Fluminense', 'gols_casa': 1, 'time_fora': 'Vasco',    'gols_fora': 0})
-    ranking.atualizar_pontos({'time_casa': 'Fluminense', 'gols_casa': 1, 'time_fora': 'Vasco',    'gols_fora': 0})
+    ranking.atualizar_pontos({'time1': 'Fluminense', 'gols_time1': 1, 'time2': 'Flamengo', 'gols_time2': 0})
+    ranking.atualizar_pontos({'time1': 'Fluminense', 'gols_time1': 1, 'time2': 'Vasco',    'gols_time2': 0})
+    ranking.atualizar_pontos({'time1': 'Fluminense', 'gols_time1': 1, 'time2': 'Vasco',    'gols_time2': 0})
     # flamengo venceu 2 jogos - 6 pts
-    ranking.atualizar_pontos({'time_casa': 'Flamengo', 'gols_casa': 1, 'time_fora': 'Vasco', 'gols_fora': 0})
-    ranking.atualizar_pontos({'time_casa': 'Flamengo', 'gols_casa': 1, 'time_fora': 'Vasco', 'gols_fora': 0})
+    ranking.atualizar_pontos({'time1': 'Flamengo', 'gols_time1': 1, 'time2': 'Vasco', 'gols_time2': 0})
+    ranking.atualizar_pontos({'time1': 'Flamengo', 'gols_time1': 1, 'time2': 'Vasco', 'gols_time2': 0})
     # vasco venceu 1 jogo - 3 pts
-    ranking.atualizar_pontos({'time_casa': 'Vasco', 'gols_casa': 1, 'time_fora': 'Flamengo', 'gols_fora': 0})
+    ranking.atualizar_pontos({'time1': 'Vasco', 'gols_time1': 1, 'time2': 'Flamengo', 'gols_time2': 0})
     relacao = ranking.ordenar_classificacao()
     passou = (
         relacao[0]['time'] == 'Fluminense'
@@ -146,8 +146,8 @@ def teste_ordenar_classificacao_por_pontos():
 
 def teste_ordenar_classificacao_desempate_vitorias():
     ranking.criar_tabela(['Flamengo', 'Vasco'])
-    ranking.atualizar_pontos({'time_casa': 'Flamengo', 'gols_casa': 1,
-                               'time_fora': 'Vasco',    'gols_fora': 0})
+    ranking.atualizar_pontos({'time1': 'Flamengo', 'gols_time1': 1,
+                               'time2': 'Vasco',    'gols_time2': 0})
     relacao = ranking.ordenar_classificacao()
     passou = (
         relacao[0]['time'] == 'Flamengo' and relacao[0]['vitorias'] == 1
@@ -158,10 +158,10 @@ def teste_ordenar_classificacao_desempate_vitorias():
 
 def teste_ordenar_classificacao_desempate_saldo_gols():
     ranking.criar_tabela(['Flamengo', 'Vasco', 'Fluminense'])
-    ranking.atualizar_pontos({'time_casa': 'Flamengo',   'gols_casa': 3,
-                               'time_fora': 'Fluminense', 'gols_fora': 1})
-    ranking.atualizar_pontos({'time_casa': 'Vasco',      'gols_casa': 2,
-                               'time_fora': 'Fluminense', 'gols_fora': 1})
+    ranking.atualizar_pontos({'time1': 'Flamengo',   'gols_time1': 3,
+                               'time2': 'Fluminense', 'gols_time2': 1})
+    ranking.atualizar_pontos({'time1': 'Vasco',      'gols_time1': 2,
+                               'time2': 'Fluminense', 'gols_time2': 1})
     relacao  = ranking.ordenar_classificacao()
     flamengo = next(t for t in relacao if t['time'] == 'Flamengo')
     vasco    = next(t for t in relacao if t['time'] == 'Vasco')
@@ -171,8 +171,8 @@ def teste_ordenar_classificacao_desempate_saldo_gols():
 
 def teste_ordenar_classificacao_tabela_original_nao_modificada():
     ranking.criar_tabela(['Flamengo', 'Vasco'])
-    ranking.atualizar_pontos({'time_casa': 'Vasco',    'gols_casa': 3,
-                               'time_fora': 'Flamengo', 'gols_fora': 0})
+    ranking.atualizar_pontos({'time1': 'Vasco',    'gols_time1': 3,
+                               'time2': 'Flamengo', 'gols_time2': 0})
     relacao_antes = ranking.ordenar_classificacao()
     primeiro_antes = relacao_antes[0]['time']
     ranking.ordenar_classificacao()
@@ -193,8 +193,8 @@ def teste_mostrar_classificacao_condicao_retorno():
 
 def teste_mostrar_classificacao_tabela_nao_modificada():
     ranking.criar_tabela(['Flamengo', 'Vasco'])
-    ranking.atualizar_pontos({'time_casa': 'Flamengo', 'gols_casa': 2,
-                               'time_fora': 'Vasco',    'gols_fora': 0})
+    ranking.atualizar_pontos({'time1': 'Flamengo', 'gols_time1': 2,
+                               'time2': 'Vasco',    'gols_time2': 0})
     ranking.mostrar_classificacao()
     relacao  = ranking.ordenar_classificacao()
     flamengo = next(t for t in relacao if t['time'] == 'Flamengo')
@@ -222,7 +222,7 @@ def executar_testes():
         teste_criar_tabela_multiplos_times,
         teste_criar_tabela_nome_preservado,
         teste_criar_tabela_lista_vazia,
-        teste_atualizar_pontos_vitoria_time_casa,
+        teste_atualizar_pontos_vitoria_time1,
         teste_atualizar_pontos_vitoria_time_fora,
         teste_atualizar_pontos_empate,
         teste_atualizar_pontos_gols_contabilizados,
