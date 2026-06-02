@@ -1,5 +1,198 @@
 {% extends "base.html" %}
 {% block titulo %}Torneio{% endblock %}
 {% block conteudo %}
-<h1>Torneio</h1>
+
+<h1 class="page-title">Torneio</h1>
+
+{% if msg %}
+    <div class="alerta alerta-{{ tipo }}">{{ msg }}</div>
+{% endif %}
+
+<!-- Campeão -->
+{% if campeao %}
+    <div class="card" style="text-align:center; background: linear-gradient(135deg, #fef9c3, #fde68a); border: 2px solid #f59e0b;">
+        <div style="font-size:3rem;">🏆</div>
+        <h2 style="font-size:1.6rem; color:#92400e; margin: 0.5rem 0;">Campeão do Torneio</h2>
+        <p style="font-size:2rem; font-weight:800; color:#78350f;">{{ campeao }}</p>
+        <form action="/torneio/reiniciar" method="POST" style="margin-top:1.5rem;">
+            <button type="submit" class="btn btn-aviso"
+                    onclick="return confirm('Reiniciar o torneio? Partidas e ranking serão apagados, mas os times serão mantidos.')">
+                Reiniciar Torneio
+            </button>
+        </form>
+    </div>
+
+{% else %}
+
+    <!-- Ações principais -->
+    <div class="card">
+        <h2 style="font-size:1.1rem; color:#3b1fa3; margin-bottom:1.25rem;">Ações</h2>
+
+        <div style="display:flex; flex-wrap:wrap; gap:0.75rem; align-items:center;">
+
+            <!-- Gerar Confrontos -->
+            {% if times | length < 2 %}
+                <span class="btn btn-secundario" style="opacity:0.5; cursor:not-allowed;"
+                      title="Cadastre pelo menos 2 times para gerar confrontos.">
+                    Gerar Confrontos
+                </span>
+            {% else %}
+                <form action="/torneio/gerar" method="POST" style="margin:0;">
+                    <button type="submit" class="btn btn-primario">Gerar Confrontos</button>
+                </form>
+            {% endif %}
+
+            <!-- Iniciar Rodada -->
+            {% if confrontos %}
+                <form action="/torneio/iniciar" method="POST" style="margin:0;">
+                    <button type="submit" class="btn btn-sucesso">Iniciar Rodada</button>
+                </form>
+            {% else %}
+                <span class="btn btn-sucesso" style="opacity:0.5; cursor:not-allowed;"
+                      title="Gere os confrontos primeiro.">
+                    Iniciar Rodada
+                </span>
+            {% endif %}
+
+            <!-- Avançar Fase -->
+            {% if resultados %}
+                <form action="/torneio/avancar" method="POST" style="margin:0;">
+                    <button type="submit" class="btn btn-aviso">Avançar Fase</button>
+                </form>
+            {% else %}
+                <span class="btn btn-aviso" style="opacity:0.5; cursor:not-allowed;"
+                      title="Inicie uma rodada primeiro.">
+                    Avançar Fase
+                </span>
+            {% endif %}
+
+            <div style="flex:1;"></div>
+
+            <!-- Reiniciar -->
+            <form action="/torneio/reiniciar" method="POST" style="margin:0;">
+                <button type="submit" class="btn btn-perigo"
+                        onclick="return confirm('Reiniciar o torneio? Partidas e ranking serão apagados, mas os times serão mantidos.')">
+                    Reiniciar Torneio
+                </button>
+            </form>
+
+        </div>
+
+        {% if times | length < 2 %}
+            <p style="margin-top:0.75rem; font-size:0.85rem; color:#9ca3af;">
+                ⚠️ Você precisa de pelo menos 2 times cadastrados para iniciar um torneio.
+                <a href="/times" style="color:#6c3fc5;">Cadastrar times →</a>
+            </p>
+        {% endif %}
+    </div>
+
+    <!-- Confrontos da rodada atual -->
+    {% if confrontos %}
+        <div class="card">
+            <h2 style="font-size:1.1rem; color:#3b1fa3; margin-bottom:1.25rem;">
+                Confrontos
+                <span style="font-size:0.85rem; font-weight:400; color:#9ca3af; margin-left:0.5rem;">
+                    {{ confrontos | length }} jogo{{ "s" if confrontos | length != 1 else "" }}
+                </span>
+            </h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="text-align:center;">#</th>
+                        <th>Time 1</th>
+                        <th style="width:40px; text-align:center;">vs</th>
+                        <th>Time 2</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for par in confrontos %}
+                    <tr>
+                        <td style="text-align:center; color:#9ca3af;">{{ loop.index }}</td>
+                        <td><strong>{{ par[0] }}</strong></td>
+                        <td style="text-align:center; color:#9ca3af; font-weight:700;">×</td>
+                        <td><strong>{{ par[1] }}</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+
+    <!-- Resultados da última rodada -->
+    {% if resultados %}
+        <div class="card">
+            <h2 style="font-size:1.1rem; color:#3b1fa3; margin-bottom:1.25rem;">Resultados da Rodada</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Time 1</th>
+                        <th style="width:80px; text-align:center;">Placar</th>
+                        <th>Time 2</th>
+                        <th style="width:120px; text-align:center;">Vencedor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in resultados %}
+                    <tr>
+                        <td>
+                            {% if r.gols_time1 > r.gols_time2 %}
+                                <strong>{{ r.time1 }}</strong>
+                            {% else %}
+                                {{ r.time1 }}
+                            {% endif %}
+                        </td>
+                        <td style="text-align:center; font-weight:700; font-size:1.05rem;">
+                            {{ r.gols_time1 }} × {{ r.gols_time2 }}
+                        </td>
+                        <td>
+                            {% if r.gols_time2 > r.gols_time1 %}
+                                <strong>{{ r.time2 }}</strong>
+                            {% else %}
+                                {{ r.time2 }}
+                            {% endif %}
+                        </td>
+                        <td style="text-align:center;">
+                            {% if r.gols_time1 > r.gols_time2 %}
+                                <span style="color:#166534; font-weight:700;">{{ r.time1 }}</span>
+                            {% elif r.gols_time2 > r.gols_time1 %}
+                                <span style="color:#166534; font-weight:700;">{{ r.time2 }}</span>
+                            {% else %}
+                                <span style="color:#92400e;">Empate</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+
+    <!-- Times no torneio -->
+    <div class="card">
+        <h2 style="font-size:1.1rem; color:#3b1fa3; margin-bottom:1.25rem;">
+            Times cadastrados
+            <span style="font-size:0.85rem; font-weight:400; color:#9ca3af; margin-left:0.5rem;">
+                {{ times | length }} time{{ "s" if times | length != 1 else "" }}
+            </span>
+        </h2>
+
+        {% if times %}
+            <div style="display:flex; flex-wrap:wrap; gap:0.5rem;">
+                {% for time in times %}
+                    <span style="background:#f5f3ff; color:#3b1fa3; border:1px solid #ddd5f7;
+                                 padding:0.35rem 0.85rem; border-radius:999px; font-size:0.9rem; font-weight:600;">
+                        {{ time.nome }}
+                    </span>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p style="color:#9ca3af; text-align:center; padding:1rem 0;">
+                Nenhum time cadastrado ainda.
+                <a href="/times" style="color:#6c3fc5;">Cadastrar times →</a>
+            </p>
+        {% endif %}
+    </div>
+
+{% endif %}
+
 {% endblock %}

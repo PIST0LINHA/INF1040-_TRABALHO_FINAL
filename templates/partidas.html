@@ -1,5 +1,167 @@
 {% extends "base.html" %}
 {% block titulo %}Partidas{% endblock %}
 {% block conteudo %}
-<h1>Partidas</h1>
+
+<h1 class="page-title">Partidas</h1>
+
+{% if msg %}
+    <div class="alerta alerta-{{ tipo }}">{{ msg }}</div>
+{% endif %}
+
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem; margin-bottom:1.5rem;">
+
+    <!-- Registrar resultado -->
+    <div class="card">
+        <h2 style="font-size:1.1rem; color:#3b1fa3; margin-bottom:1.25rem;">Registrar resultado</h2>
+        <form action="/partidas/registrar" method="POST">
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                <div>
+                    <label for="time1">Time 1 *</label>
+                    {% if todos_times %}
+                        <select id="time1" name="time1" required>
+                            <option value="" disabled selected>Selecione...</option>
+                            {% for time in todos_times %}
+                                <option value="{{ time.nome }}">{{ time.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    {% else %}
+                        <input type="text" id="time1" name="time1" placeholder="Nome do time" required>
+                    {% endif %}
+                </div>
+                <div>
+                    <label for="time2">Time 2 *</label>
+                    {% if todos_times %}
+                        <select id="time2" name="time2" required>
+                            <option value="" disabled selected>Selecione...</option>
+                            {% for time in todos_times %}
+                                <option value="{{ time.nome }}">{{ time.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    {% else %}
+                        <input type="text" id="time2" name="time2" placeholder="Nome do time" required>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                <div>
+                    <label for="gols_time1">Gols Time 1 *</label>
+                    <input type="number" id="gols_time1" name="gols_time1" min="0" value="0" required>
+                </div>
+                <div>
+                    <label for="gols_time2">Gols Time 2 *</label>
+                    <input type="number" id="gols_time2" name="gols_time2" min="0" value="0" required>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primario">Registrar</button>
+        </form>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card">
+        <h2 style="font-size:1.1rem; color:#3b1fa3; margin-bottom:1.25rem;">Filtrar partidas</h2>
+        <form action="/partidas" method="GET">
+
+            <label for="filtro_time">Por time</label>
+            <select id="filtro_time" name="filtro_time">
+                <option value="">Todos os times</option>
+                {% for time in todos_times %}
+                    <option value="{{ time.nome }}"
+                        {{ "selected" if filtro_time == time.nome else "" }}>
+                        {{ time.nome }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <label for="filtro_rodada">Por rodada</label>
+            <select id="filtro_rodada" name="filtro_rodada">
+                <option value="">Todas as rodadas</option>
+                {% for r in rodadas %}
+                    <option value="{{ r }}" {{ "selected" if filtro_rodada == r else "" }}>
+                        Rodada {{ r }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <div style="display:flex; gap:0.5rem;">
+                <button type="submit" class="btn btn-primario">Filtrar</button>
+                <a href="/partidas" class="btn btn-secundario">Limpar</a>
+            </div>
+        </form>
+    </div>
+
+</div>
+
+<!-- Histórico -->
+<div class="card">
+    <h2 style="font-size:1.1rem; color:#3b1fa3; margin-bottom:1.25rem;">
+        Histórico
+        <span style="font-size:0.85rem; font-weight:400; color:#9ca3af; margin-left:0.5rem;">
+            {{ partidas | length }} partida{{ "s" if partidas | length != 1 else "" }}
+            {% if filtro_time or filtro_rodada %}
+                <span style="color:#6c3fc5;">(filtrado)</span>
+            {% endif %}
+        </span>
+    </h2>
+
+    {% if partidas %}
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:80px; text-align:center;">Rodada</th>
+                    <th>Time 1</th>
+                    <th style="width:80px; text-align:center;">Placar</th>
+                    <th>Time 2</th>
+                    <th style="width:120px; text-align:center;">Resultado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in partidas %}
+                <tr>
+                    <td style="text-align:center; color:#9ca3af;">
+                        {% if p.rodada %}Rodada {{ p.rodada }}{% else %}—{% endif %}
+                    </td>
+                    <td>
+                        {% if p.gols_time1 > p.gols_time2 %}
+                            <strong>{{ p.time1 }}</strong>
+                        {% else %}
+                            {{ p.time1 }}
+                        {% endif %}
+                    </td>
+                    <td style="text-align:center; font-weight:700; font-size:1.05rem;">
+                        {{ p.gols_time1 }} × {{ p.gols_time2 }}
+                    </td>
+                    <td>
+                        {% if p.gols_time2 > p.gols_time1 %}
+                            <strong>{{ p.time2 }}</strong>
+                        {% else %}
+                            {{ p.time2 }}
+                        {% endif %}
+                    </td>
+                    <td style="text-align:center; font-size:0.85rem;">
+                        {% if p.gols_time1 > p.gols_time2 %}
+                            <span style="color:#166534; font-weight:600;">{{ p.time1 }}</span>
+                        {% elif p.gols_time2 > p.gols_time1 %}
+                            <span style="color:#166534; font-weight:600;">{{ p.time2 }}</span>
+                        {% else %}
+                            <span style="color:#92400e;">Empate</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p style="color:#9ca3af; text-align:center; padding:2rem 0;">
+            {% if filtro_time or filtro_rodada %}
+                Nenhuma partida encontrada para este filtro.
+            {% else %}
+                Nenhuma partida registrada ainda.
+            {% endif %}
+        </p>
+    {% endif %}
+</div>
+
 {% endblock %}
