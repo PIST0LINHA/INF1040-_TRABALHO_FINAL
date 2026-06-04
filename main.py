@@ -96,9 +96,7 @@ def registrar_partida():
     if isinstance(resultado, dict) and "erro" in resultado:
         return redirect(url_for("pagina_partidas", msg=resultado["erro"], tipo="erro"))
     if isinstance(resultado, dict):
-        tabela_ranking_ref = ranking.atualizar_pontos(tabela_ranking, resultado)
-        tabela_ranking.clear()
-        tabela_ranking.extend(tabela_ranking_ref)
+        ranking.atualizar_pontos(resultado)
         return redirect(url_for("pagina_partidas", msg="Partida registrada com sucesso.", tipo="sucesso"))
     return redirect(url_for("pagina_partidas", msg=str(resultado), tipo="erro"))
 
@@ -135,7 +133,7 @@ def gerar_confrontos():
 
 @app.route("/torneio/iniciar", methods=["POST"])
 def iniciar_rodada():
-    global lista_partidas, tabela_ranking, resultados_rodada_atual, numero_rodada
+    global lista_partidas, resultados_rodada_atual, numero_rodada
     numero_rodada += 1
     resultados_rodada_atual = torneios.iniciar_rodada(confrontos_atuais)
     for resultado in resultados_rodada_atual:
@@ -161,12 +159,14 @@ def avancar_fase():
 
 @app.route("/torneio/reiniciar", methods=["POST"])
 def reiniciar_torneio():
-    global lista_partidas, tabela_ranking, confrontos_atuais, resultados_rodada_atual, campeao, numero_rodada
+    global lista_partidas, confrontos_atuais, resultados_rodada_atual, campeao, numero_rodada
     lista_partidas = []
     confrontos_atuais = []
     resultados_rodada_atual = []
     campeao = None
     numero_rodada = 0
+    nomes = [t["nome"] for t in times.listar_times()]
+    ranking.criar_tabela(nomes)
     return redirect(url_for("pagina_torneio"))
 
 
