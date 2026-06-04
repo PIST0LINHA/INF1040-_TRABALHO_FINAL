@@ -22,8 +22,8 @@ def teste_criar_tabela_multiplos_times():
         and all(t['vitorias'] == 0 for t in relacao)
         and all(t['empates'] == 0 for t in relacao)
         and all(t['derrotas'] == 0 for t in relacao)
-        and all(t['gols_pro'] == 0 for t in relacao)
-        and all(t['gols_contra'] == 0 for t in relacao)
+        and all(t['gols_marcados'] == 0 for t in relacao)
+        and all(t['gols_sofridos'] == 0 for t in relacao)
     )
     registrar("criar_tabela: múltiplos times com contadores zerados", passou, str(relacao))
 
@@ -97,8 +97,8 @@ def teste_atualizar_pontos_gols_contabilizados():
     flamengo = next(t for t in relacao if t['time'] == 'Flamengo')
     vasco    = next(t for t in relacao if t['time'] == 'Vasco')
     passou = (
-        flamengo['gols_pro'] == 3 and flamengo['gols_contra'] == 1
-        and vasco['gols_pro'] == 1 and vasco['gols_contra'] == 3
+        flamengo['gols_marcados'] == 3 and flamengo['gols_sofridos'] == 1
+        and vasco['gols_marcados'] == 1 and vasco['gols_sofridos'] == 3
     )
     registrar("atualizar_pontos: gols contabilizados corretamente", passou,
               f"Flamengo={flamengo} | Vasco={vasco}")
@@ -116,8 +116,8 @@ def teste_atualizar_pontos_acumulativo():
         flamengo['pontos'] == 4
         and flamengo['vitorias'] == 1
         and flamengo['empates'] == 1
-        and flamengo['gols_pro'] == 3
-        and flamengo['gols_contra'] == 1
+        and flamengo['gols_marcados'] == 3
+        and flamengo['gols_sofridos'] == 1
     )
     registrar("atualizar_pontos: acumulativo após 2 partidas", passou, str(flamengo))
 

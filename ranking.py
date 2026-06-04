@@ -12,8 +12,8 @@ def criar_tabela(lista_times: list[str]) -> int:
             'vitorias': 0,
             'empates': 0,
             'derrotas': 0,
-            'gols_pro': 0,
-            'gols_contra': 0,
+            'gols_marcados': 0,
+            'gols_sofridos': 0,
             'saldo_gols': 0 })
     return 0  # sucesso
 
@@ -27,9 +27,9 @@ def atualizar_pontos(resultado: dict) -> int:
         if time['time'] == resultado['time1']:
             encontrado = True
             time['jogos']       += 1
-            time['gols_pro']    += gols_casa
-            time['gols_contra'] += gols_fora
-            time['saldo_gols']   = time['gols_pro'] - time['gols_contra']
+            time['gols_marcados']    += gols_casa
+            time['gols_sofridos'] += gols_fora
+            time['saldo_gols']   = time['gols_marcados'] - time['gols_sofridos']
             if gols_casa > gols_fora:
                 time['vitorias'] += 1
                 time['pontos']   += 3
@@ -41,9 +41,9 @@ def atualizar_pontos(resultado: dict) -> int:
         elif time['time'] == resultado['time2']:
             encontrado = True
             time['jogos']       += 1
-            time['gols_pro']    += gols_fora
-            time['gols_contra'] += gols_casa
-            time['saldo_gols']   = time['gols_pro'] - time['gols_contra']
+            time['gols_marcados']    += gols_fora
+            time['gols_sofridos'] += gols_casa
+            time['saldo_gols']   = time['gols_marcados'] - time['gols_sofridos']
             if gols_fora > gols_casa:
                 time['vitorias'] += 1
                 time['pontos']   += 3
@@ -56,7 +56,7 @@ def atualizar_pontos(resultado: dict) -> int:
    
 
 def ordenar_classificacao():
-    return sorted(_tabela,key=lambda t: (t['pontos'], t['vitorias'], t['saldo_gols'], t['gols_pro']),reverse=True)
+    return sorted(_tabela,key=lambda t: (t['pontos'], t['vitorias'], t['saldo_gols'], t['gols_marcados']),reverse=True)
 
 
 def mostrar_classificacao() -> int:
@@ -69,6 +69,6 @@ def mostrar_classificacao() -> int:
         linhas.append(
             f"{pos:<4} {time['time']:<15} {time['pontos']:>4} {time['jogos']:>4} "
             f"{time['vitorias']:>4} {time['empates']:>4} {time['derrotas']:>4} "
-            f"{time['gols_pro']:>4} {time['gols_contra']:>4} {time['saldo_gols']:>4}")
+            f"{time['gols_marcados']:>4} {time['gols_sofridos']:>4} {time['saldo_gols']:>4}")
     print('\n'.join(linhas))
     return 0 

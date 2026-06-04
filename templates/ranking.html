@@ -42,11 +42,11 @@
                     <td style="text-align:center; color:#166534;">{{ entrada.vitorias }}</td>
                     <td style="text-align:center; color:#92400e;">{{ entrada.empates }}</td>
                     <td style="text-align:center; color:#991b1b;">{{ entrada.derrotas }}</td>
-                    <td style="text-align:center;">{{ entrada.gols_marcados }}</td>
-                    <td style="text-align:center;">{{ entrada.gols_sofridos }}</td>
+                    <td style="text-align:center;">{{ entrada['gols_marcados'] }}</td>
+                    <td style="text-align:center;">{{ entrada['gols_sofridos'] }}</td>
                     <td style="text-align:center; font-weight:600;
-                        {% if entrada.gols_marcados - entrada.gols_sofridos > 0 %}color:#166534;
-                        {% elif entrada.gols_marcados - entrada.gols_sofridos < 0 %}color:#991b1b;
+                        {% if entrada['gols_marcados'] - entrada['gols_sofridos'] > 0 %}color:#166534;
+                        {% elif entrada['gols_marcados'] - entrada['gols_sofridos'] < 0 %}color:#991b1b;
                         {% endif %}">
                         {% set saldo = entrada.gols_marcados - entrada.gols_sofridos %}
                         {{ "+" if saldo > 0 else "" }}{{ saldo }}
