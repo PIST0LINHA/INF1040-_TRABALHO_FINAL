@@ -24,16 +24,16 @@ def salvar_partidas() -> int:
         return 0
 
 
-def simular_partida(time1: str, time2: str) -> int:
+def simular_partida(time1: str, time2: str) -> dict:
     if not time1 or not time2:
-        _lista_partidas.append({"erro": "Erro: nomes dos timer não podem ser vazio"})
-        return 1
+        _lista_partidas.append({"erro": "Erro: nomes dos times não podem ser vazio"})
+        return {"erro": "Erro: nomes dos times não podem ser vazios"}
 
     if time1 == time2:
         _lista_partidas.append(
             {"erro": "Erro: um time não pode disputar contra si mesmo"}
         )
-        return 1
+        return {"erro": "Erro: um time não pode disputar contra si mesmo"}
 
     partida = {
         "time1": time1,
@@ -43,33 +43,32 @@ def simular_partida(time1: str, time2: str) -> int:
     }
 
     _lista_partidas.append(partida)
-    return 0
+    return partida
 
 
-def gerar_resultado(partida: dict) -> int:
+def gerar_resultado(partida: dict) -> str:
     if "erro" in partida:
         print(f"{partida['erro']}")
-        return 1
+        return f"{partida['erro']}"
 
-    print(
+    return (
         f"{partida['time1']}:{partida['gols_time1']}  x"
         f"{partida['time2']}: {partida['gols_time2']}"
     )
-    return 0
 
 
 def registrar_resultado(
-    lista_partidas: list, time1: str, time2: str, gols_time1: str, gols_time2: str
-) -> int:
+    lista_partidas: list, time1: str, time2: str, gols_time1: int, gols_time2: int
+) -> dict:
     if not time1 or not time2:
         _lista_partidas.append({"erro": "Erro: nomes dos times não podem ser vazios"})
-        return 1
+        return {"erro": "Erro: nomes dos times não podem ser vazios"}
 
     if time1 == time2:
         _lista_partidas.append(
             {"erro": "Erro: um time não pode disputar contra si mesmo"}
         )
-        return 1
+        return {"erro": "Erro: um time não pode disputar contra si mesmo"}
 
     partida = {
         "time1": time1,
@@ -79,7 +78,7 @@ def registrar_resultado(
     }
 
     lista_partidas.append(partida)
-    return 0
+    return partida
 
 
 def listar_partidas(_lista_partidas: list) -> list:
