@@ -1,4 +1,41 @@
 import random
+import json
+import os
+
+ARQ_LISTA_PARTIDAS = "partidas.json"
+_partidas_estipuladas = []
+
+
+def carregar_partidas() -> int:
+    global _partidas_estipuladas
+    if os.path.exists(ARQ_LISTA_PARTIDAS):
+        with open(ARQ_LISTA_PARTIDAS, "r", encoding="utf-8") as f:
+            _partidas_estipuladas = json.load(f)
+            return 0
+    else:
+        _partidas_estipuladas = []
+        return 1
+
+
+def buscar_partida_estipulada(time1, time2):
+    for partida in _partidas_estipuladas:
+        if "erro" in partida:
+            continue
+        if partida.get("time1") == time1 and partida.get("time2") == time2:
+            return {
+                "time1": time1,
+                "time2": time2,
+                "gols_time1": partida["gols_time1"],
+                "gols_time2": partida["gols_time2"],
+            }
+        if partida.get("time1") == time2 and partida.get("time2") == time1:
+            return {
+                "time1": time1,
+                "time2": time2,
+                "gols_time1": partida["gols_time2"],
+                "gols_time2": partida["gols_time1"],
+            }
+    return None
 
 
 def gerar_confronto(lista_times):
