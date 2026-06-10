@@ -48,14 +48,19 @@ def gerar_confronto(lista_times):
 
 
 def iniciar_rodada(confrontos):
+    carregar_partidas()
     resultados = []
     for time1, time2 in confrontos:
-        resultados.append({
-            "time1": time1,
-            "time2": time2,
-            "gols_time1": random.randint(0, 5),
-            "gols_time2": random.randint(0, 5),
-        })
+        estipulada = buscar_partida_estipulada(time1, time2)
+        if estipulada is not None:
+            resultados.append(estipulada)
+        else:
+            resultados.append({
+                "time1": time1,
+                "time2": time2,
+                "gols_time1": random.randint(0, 5),
+                "gols_time2": random.randint(0, 5),
+            })
     return resultados
 
 
