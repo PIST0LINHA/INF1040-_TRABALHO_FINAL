@@ -42,26 +42,24 @@
                 </form>
             {% endif %}
 
-            <!-- Iniciar Rodada -->
+                <!-- Registrar Partidas -->
             {% if confrontos %}
-                <form action="/torneio/iniciar" method="POST" style="margin:0;">
-                    <button type="submit" class="btn btn-sucesso">Iniciar Rodada</button>
-                </form>
+                <a href="/partidas" class="btn btn-sucesso">Registrar Partidas →</a>
             {% else %}
                 <span class="btn btn-sucesso" style="opacity:0.5; cursor:not-allowed;"
                       title="Gere os confrontos primeiro.">
-                    Iniciar Rodada
+                    Registrar Partidas
                 </span>
             {% endif %}
 
             <!-- Avançar Fase -->
-            {% if resultados %}
+            {% if rodada_completa %}
                 <form action="/torneio/avancar" method="POST" style="margin:0;">
                     <button type="submit" class="btn btn-aviso">Avançar Fase</button>
                 </form>
             {% else %}
                 <span class="btn btn-aviso" style="opacity:0.5; cursor:not-allowed;"
-                      title="Inicie uma rodada primeiro.">
+                      title="Registre todos os resultados da rodada atual na página de Partidas.">
                     Avançar Fase
                 </span>
             {% endif %}
@@ -90,10 +88,15 @@
     {% if confrontos %}
         <div class="card">
             <h2 style="font-size:1.1rem; color:#3b1fa3; margin-bottom:1.25rem;">
-                Confrontos
+                Confrontos — Rodada {{ numero_rodada }}
                 <span style="font-size:0.85rem; font-weight:400; color:#9ca3af; margin-left:0.5rem;">
                     {{ confrontos | length }} jogo{{ "s" if confrontos | length != 1 else "" }}
                 </span>
+                {% if not rodada_completa %}
+                    <a href="/partidas" style="font-size:0.85rem; font-weight:500; color:#6c3fc5; margin-left:1rem;">
+                        → Registrar resultados
+                    </a>
+                {% endif %}
             </h2>
             <table>
                 <thead>

@@ -74,6 +74,18 @@ def pagina_partidas():
 
     rodadas = sorted({str(p.get("rodada", "")) for p in lista_partidas if p.get("rodada")})
 
+    confrontos_pendentes = []
+    for c in confrontos_atuais:
+        tem_resultado = any(
+            (p.get("time1") == c[0] and p.get("time2") == c[1]) or
+            (p.get("time1") == c[1] and p.get("time2") == c[0])
+            for p in lista_partidas if p.get("rodada") == numero_rodada
+        )
+        if not tem_resultado:
+            confrontos_pendentes.append(c)
+
+    partidas_rodada_atual = [p for p in lista_partidas if p.get("rodada") == numero_rodada]
+
     return render_template(
         "partidas.html",
         partidas=partidas_filtradas,
@@ -83,22 +95,53 @@ def pagina_partidas():
         filtro_rodada=filtro_rodada,
         msg=msg,
         tipo=tipo,
+        confrontos_atuais=confrontos_atuais,
+        confrontos_pendentes=confrontos_pendentes,
+        partidas_rodada_atual=partidas_rodada_atual,
+        numero_rodada=numero_rodada,
     )
 
 
 @app.route("/partidas/registrar", methods=["POST"])
 def registrar_partida():
+    global resultados_rodada_atual
     time1 = request.form.get("time1", "").strip()
     time2 = request.form.get("time2", "").strip()
-    gols1 = int(request.form.get("gols_time1", 0))
-    gols2 = int(request.form.get("gols_time2", 0))
-    resultado = partidas.registrar_resultado(lista_partidas, time1, time2, gols1, gols2)
-    if isinstance(resultado, dict) and "erro" in resultado:
-        return redirect(url_for("pagina_partidas", msg=resultado["erro"], tipo="erro"))
-    if isinstance(resultado, dict):
-        ranking.atualizar_pontos(resultado)
-        return redirect(url_for("pagina_partidas", msg="Partida registrada com sucesso.", tipo="sucesso"))
-    return redirect(url_for("pagina_partidas", msg=str(resultado), tipo="erro"))
+
+    if not time1 or not time2:
+        return redirect(url_for("pagina_partidas", msg="Erro: nomes dos times não podem ser vazios.", tipo="erro"))
+    if time1 == time2:
+        return redirect(url_for("pagina_partidas", msg="Erro: um time não pode disputar contra si mesmo.", tipo="erro"))
+
+    try:
+        gols1 = int(request.form.get("gols_time1", 0))
+        gols2 = int(request.form.get("gols_time2", 0))
+    except ValueError:
+        return redirect(url_for("pagina_partidas", msg="Erro: gols devem ser números inteiros.", tipo="erro"))
+
+    rodada_partida = None
+    for c in confrontos_atuais:
+        if (c[0] == time1 and c[1] == time2) or (c[1] == time1 and c[0] == time2):
+            ja_registrada = any(
+                (p.get("time1") == c[0] and p.get("time2") == c[1]) or
+                (p.get("time1") == c[1] and p.get("time2") == c[0])
+                for p in lista_partidas if p.get("rodada") == numero_rodada
+            )
+            if ja_registrada:
+                return redirect(url_for("pagina_partidas",
+                    msg=f"Partida {time1} × {time2} já foi registrada nesta rodada.", tipo="erro"))
+            rodada_partida = numero_rodada
+            break
+
+    resultado = {"time1": time1, "time2": time2, "gols_time1": gols1, "gols_time2": gols2}
+    if rodada_partida:
+        resultado["rodada"] = rodada_partida
+
+    lista_partidas.append(resultado)
+    ranking.atualizar_pontos(resultado)
+    resultados_rodada_atual = [p for p in lista_partidas if p.get("rodada") == numero_rodada]
+
+    return redirect(url_for("pagina_partidas", msg="Partida registrada com sucesso.", tipo="sucesso"))
 
 
 @app.route("/torneio")
@@ -106,6 +149,7 @@ def pagina_torneio():
     todos_times = times.listar_times()
     msg = request.args.get("msg", "")
     tipo = request.args.get("tipo", "")
+    rodada_completa = len(confrontos_atuais) > 0 and len(resultados_rodada_atual) >= len(confrontos_atuais)
     return render_template(
         "torneio.html",
         times=todos_times,
@@ -114,44 +158,40 @@ def pagina_torneio():
         campeao=campeao,
         msg=msg,
         tipo=tipo,
+        numero_rodada=numero_rodada,
+        rodada_completa=rodada_completa,
     )
 
 
 @app.route("/torneio/gerar", methods=["POST"])
 def gerar_confrontos():
-    global confrontos_atuais, resultados_rodada_atual, campeao
+    global confrontos_atuais, resultados_rodada_atual, campeao, numero_rodada, lista_partidas
     todos_times = times.listar_times()
     if len(todos_times) < 2:
         return redirect(url_for("pagina_torneio", msg="É necessário pelo menos 2 times para gerar confrontos.", tipo="erro"))
     nomes = [t["nome"] for t in todos_times]
-    ranking.criar_tabela(nomes) 
+    ranking.criar_tabela(nomes)
     confrontos_atuais = torneios.gerar_confronto(nomes)
     resultados_rodada_atual = []
     campeao = None
-    return redirect(url_for("pagina_torneio"))
-
-
-@app.route("/torneio/iniciar", methods=["POST"])
-def iniciar_rodada():
-    global lista_partidas, resultados_rodada_atual, numero_rodada
-    numero_rodada += 1
-    resultados_rodada_atual = torneios.iniciar_rodada(confrontos_atuais)
-    for resultado in resultados_rodada_atual:
-        resultado["rodada"] = numero_rodada
-        lista_partidas.append(resultado)
-        ranking.atualizar_pontos(resultado)
+    lista_partidas = []
+    numero_rodada = 1
     return redirect(url_for("pagina_torneio"))
 
 
 @app.route("/torneio/avancar", methods=["POST"])
 def avancar_fase():
-    global confrontos_atuais, resultados_rodada_atual, campeao
+    global confrontos_atuais, resultados_rodada_atual, campeao, numero_rodada
+    if len(resultados_rodada_atual) < len(confrontos_atuais):
+        return redirect(url_for("pagina_torneio",
+            msg="Registre os resultados de todas as partidas na página de Partidas antes de avançar.", tipo="erro"))
     classificados = torneios.avancar_fase(resultados_rodada_atual)
     if len(classificados) == 1:
         campeao = classificados[0]
         confrontos_atuais = []
         resultados_rodada_atual = []
     else:
+        numero_rodada += 1
         confrontos_atuais = torneios.gerar_confronto(classificados)
         resultados_rodada_atual = []
     return redirect(url_for("pagina_torneio"))
