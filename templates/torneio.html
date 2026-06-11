@@ -10,29 +10,83 @@
 
 <!-- Campeão -->
 {% if campeao %}
-    <div class="card" style="text-align:center; background: linear-gradient(135deg, #fef9c3, #fde68a); border: 2px solid #f59e0b;">
+    <div class="card" style="text-align:center; background:linear-gradient(135deg,#fef9c3,#fde68a); border:2px solid #f59e0b;">
         <div style="font-size:3rem;">🏆</div>
-        <h2 style="font-size:1.6rem; color:#92400e; margin: 0.5rem 0;">Campeão do Torneio</h2>
+        <h2 style="font-size:1.6rem; color:#92400e; margin:0.5rem 0;">Campeão — {{ torneio_ativo.nome }}</h2>
         <p style="font-size:2rem; font-weight:800; color:#78350f;">{{ campeao }}</p>
-        <form action="/torneio/reiniciar" method="POST" style="margin-top:1.5rem;">
-            <button type="submit" class="btn btn-aviso"
-                    onclick="return confirm('Reiniciar o torneio? Partidas e ranking serão apagados, mas os times serão mantidos.')">
-                Reiniciar Torneio
-            </button>
-        </form>
-    </div>
-
-{% else %}
-
-    {% if not confrontos %}
-    <!-- Seleção de times para iniciar torneio -->
-    <div class="card">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem;">
-            <h2 style="font-size:1.1rem; color:#3b1fa3; margin:0;">Iniciar Torneio</h2>
-            <span id="contador-label" style="font-size:0.85rem; color:#9ca3af;">
-                0 times selecionados
-            </span>
+        <div style="display:flex; gap:0.75rem; justify-content:center; margin-top:1.5rem;">
+            <a href="/ranking?torneio_id={{ torneio_ativo.id }}" class="btn btn-primario">Ver Ranking →</a>
+            <form action="/torneio/reiniciar" method="POST" style="margin:0;">
+                <button type="submit" class="btn btn-aviso"
+                        onclick="return confirm('Reiniciar este torneio? As partidas e o ranking serão apagados.')">
+                    Reiniciar Torneio
+                </button>
+            </form>
         </div>
+    </div>
+{% endif %}
+
+{% if not campeao %}
+
+    {% if torneio_ativo %}
+    <!-- Torneio em andamento -->
+    <div class="card">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+            <div>
+                <h2 style="font-size:1.1rem; color:#3b1fa3; margin:0;">{{ torneio_ativo.nome }}</h2>
+                <span style="font-size:0.82rem; color:#9ca3af;">Rodada {{ numero_rodada }} · {{ torneio_ativo.times | length }} times</span>
+            </div>
+            <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+                <a href="/partidas" class="btn btn-sucesso" style="padding:0.4rem 0.9rem; font-size:0.85rem;">
+                    Registrar Partidas →
+                </a>
+                {% if rodada_completa %}
+                    <form action="/torneio/avancar" method="POST" style="margin:0;">
+                        <button type="submit" class="btn btn-aviso" style="padding:0.4rem 0.9rem; font-size:0.85rem;">
+                            Avançar Fase
+                        </button>
+                    </form>
+                {% else %}
+                    <span class="btn btn-aviso" style="opacity:0.45; cursor:not-allowed; padding:0.4rem 0.9rem; font-size:0.85rem;"
+                          title="Registre todos os resultados antes de avançar.">
+                        Avançar Fase
+                    </span>
+                {% endif %}
+                <form action="/torneio/reiniciar" method="POST" style="margin:0;">
+                    <button type="submit" class="btn btn-perigo" style="padding:0.4rem 0.9rem; font-size:0.85rem;"
+                            onclick="return confirm('Reiniciar este torneio? As partidas e o ranking serão apagados.')">
+                        Reiniciar
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Confrontos da rodada -->
+        {% if confrontos %}
+            <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                {% for par in confrontos %}
+                <div style="display:flex; align-items:center; gap:0.75rem; padding:0.55rem 0.85rem;
+                            background:#f5f3ff; border-radius:8px; font-size:0.9rem;">
+                    <span style="flex:1; font-weight:600; text-align:right;">{{ par[0] }}</span>
+                    <span style="color:#9ca3af; font-weight:700; min-width:24px; text-align:center;">×</span>
+                    <span style="flex:1; font-weight:600;">{{ par[1] }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% if rodada_completa %}
+            <p style="margin-top:1rem; font-size:0.88rem; color:#166534; font-weight:600; text-align:center;">
+                ✓ Todos os resultados registrados — avance para a próxima fase.
+            </p>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Criar novo torneio — só disponível quando não há torneio em andamento -->
+    {% if not torneio_ativo %}
+    <div class="card">
+        <h2 style="font-size:1.1rem; color:#3b1fa3; margin-bottom:1.25rem;">Novo Torneio</h2>
 
         {% if times | length < 2 %}
             <p style="color:#9ca3af; font-size:0.9rem;">
@@ -41,15 +95,29 @@
             </p>
         {% else %}
             <form id="form-gerar" action="/torneio/gerar" method="POST">
-                <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap:0.6rem; margin-bottom:1.25rem;">
+
+                <label for="nome_torneio">Nome do torneio</label>
+                <input type="text" id="nome_torneio" name="nome_torneio"
+                       placeholder="Ex: Copa Verão 2025" style="margin-bottom:1.25rem;">
+
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem;">
+                    <label style="margin:0; font-size:0.9rem; font-weight:600; color:#4b5563;">
+                        Times participantes
+                    </label>
+                    <span id="contador-label" style="font-size:0.82rem; color:#9ca3af;">
+                        0 times selecionados
+                    </span>
+                </div>
+
+                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px,1fr)); gap:0.5rem; margin-bottom:1.25rem;">
                     {% for time in times %}
                         <label id="label-{{ loop.index }}" style="display:flex; align-items:center; gap:0.6rem;
-                               border:2px solid #e5e7eb; border-radius:10px; padding:0.65rem 0.85rem;
-                               cursor:pointer; transition:border-color 0.15s, background 0.15s; background:#fafafa;">
+                               border:2px solid #e5e7eb; border-radius:10px; padding:0.6rem 0.85rem;
+                               cursor:pointer; background:#fafafa; transition:border-color 0.15s, background 0.15s;">
                             <input type="checkbox" name="times_selecionados" value="{{ time.nome }}"
                                    onchange="atualizarSelecao()"
                                    style="width:16px; height:16px; flex-shrink:0; margin:0; cursor:pointer; accent-color:#6c3fc5;">
-                            <span style="font-size:0.9rem; font-weight:600; color:#222;">{{ time.nome }}</span>
+                            <span style="font-size:0.88rem; font-weight:600; color:#222;">{{ time.nome }}</span>
                         </label>
                     {% endfor %}
                 </div>
@@ -57,137 +125,85 @@
                 <div id="aviso-impar" style="display:none; font-size:0.85rem; color:#92400e;
                      background:#fef3c7; border-left:3px solid #f59e0b; padding:0.5rem 0.75rem;
                      border-radius:6px; margin-bottom:1rem;">
-                    Selecione um número par de times para gerar confrontos.
+                    Selecione um número par de times.
                 </div>
 
                 <div style="display:flex; gap:0.75rem; align-items:center;">
-                    <button id="btn-gerar" type="submit" class="btn btn-primario" disabled
-                            style="opacity:0.45; cursor:not-allowed;">
-                        Gerar Confrontos
+                    <button id="btn-gerar" type="submit" class="btn btn-primario"
+                            disabled style="opacity:0.45; cursor:not-allowed;">
+                        Criar Torneio
                     </button>
-                    <button type="button" class="btn btn-secundario" onclick="selecionarTodos()">
-                        Selecionar todos
-                    </button>
-                    <button type="button" class="btn btn-secundario" onclick="limparSelecao()">
-                        Limpar
-                    </button>
+                    <button type="button" class="btn btn-secundario" onclick="selecionarTodos()">Selecionar todos</button>
+                    <button type="button" class="btn btn-secundario" onclick="limparSelecao()">Limpar</button>
                 </div>
             </form>
         {% endif %}
     </div>
+    {% endif %}{# fim: not torneio_ativo #}
 
-    {% else %}
-    <!-- Torneio em andamento — ações -->
-    <div class="card">
-        <h2 style="font-size:1.1rem; color:#3b1fa3; margin-bottom:1.25rem;">Ações</h2>
-        <div style="display:flex; flex-wrap:wrap; gap:0.75rem; align-items:center;">
+{% endif %}{# fim: not campeao #}
 
-            <a href="/partidas" class="btn btn-sucesso">Registrar Partidas →</a>
-
-            {% if rodada_completa %}
-                <form action="/torneio/avancar" method="POST" style="margin:0;">
-                    <button type="submit" class="btn btn-aviso">Avançar Fase</button>
-                </form>
-            {% else %}
-                <span class="btn btn-aviso" style="opacity:0.5; cursor:not-allowed;"
-                      title="Registre todos os resultados da rodada atual na página de Partidas.">
-                    Avançar Fase
-                </span>
-            {% endif %}
-
-            <div style="flex:1;"></div>
-
-            <form action="/torneio/reiniciar" method="POST" style="margin:0;">
-                <button type="submit" class="btn btn-perigo"
-                        onclick="return confirm('Reiniciar o torneio? Partidas e ranking serão apagados, mas os times serão mantidos.')">
-                    Reiniciar Torneio
-                </button>
-            </form>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Confrontos da rodada atual -->
-    {% if confrontos %}
-        <div class="card">
-            <h2 style="font-size:1.1rem; color:#3b1fa3; margin-bottom:1.25rem;">
-                Confrontos — Rodada {{ numero_rodada }}
-                <span style="font-size:0.85rem; font-weight:400; color:#9ca3af; margin-left:0.5rem;">
-                    {{ confrontos | length }} jogo{{ "s" if confrontos | length != 1 else "" }}
-                </span>
-            </h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th style="text-align:center;">#</th>
-                        <th>Time 1</th>
-                        <th style="width:40px; text-align:center;">vs</th>
-                        <th>Time 2</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for par in confrontos %}
-                    <tr>
-                        <td style="text-align:center; color:#9ca3af;">{{ loop.index }}</td>
-                        <td><strong>{{ par[0] }}</strong></td>
-                        <td style="text-align:center; color:#9ca3af; font-weight:700;">×</td>
-                        <td><strong>{{ par[1] }}</strong></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    {% endif %}
-
-    <!-- Resultados da última rodada -->
-    {% if resultados %}
-        <div class="card">
-            <h2 style="font-size:1.1rem; color:#3b1fa3; margin-bottom:1.25rem;">Resultados da Rodada</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Time 1</th>
-                        <th style="width:80px; text-align:center;">Placar</th>
-                        <th>Time 2</th>
-                        <th style="width:120px; text-align:center;">Vencedor</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for r in resultados %}
-                    <tr>
-                        <td>
-                            {% if r.gols_time1 > r.gols_time2 %}
-                                <strong>{{ r.time1 }}</strong>
-                            {% else %}
-                                {{ r.time1 }}
-                            {% endif %}
-                        </td>
-                        <td style="text-align:center; font-weight:700; font-size:1.05rem;">
-                            {{ r.gols_time1 }} × {{ r.gols_time2 }}
-                        </td>
-                        <td>
-                            {% if r.gols_time2 > r.gols_time1 %}
-                                <strong>{{ r.time2 }}</strong>
-                            {% else %}
-                                {{ r.time2 }}
-                            {% endif %}
-                        </td>
-                        <td style="text-align:center;">
-                            {% if r.gols_time1 > r.gols_time2 %}
-                                <span style="color:#166534; font-weight:700;">{{ r.time1 }}</span>
-                            {% elif r.gols_time2 > r.gols_time1 %}
-                                <span style="color:#166534; font-weight:700;">{{ r.time2 }}</span>
-                            {% else %}
-                                <span style="color:#92400e;">Empate</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    {% endif %}
-
+<!-- Lista de todos os torneios -->
+{% if todos_torneios %}
+<div class="card">
+    <h2 style="font-size:1.1rem; color:#3b1fa3; margin-bottom:1.25rem;">
+        Todos os Torneios
+        <span style="font-size:0.85rem; font-weight:400; color:#9ca3af; margin-left:0.5rem;">
+            {{ todos_torneios | length }} torneio{{ "s" if todos_torneios | length != 1 else "" }}
+        </span>
+    </h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th style="text-align:center;">Times</th>
+                <th style="text-align:center;">Rodada</th>
+                <th style="text-align:center;">Status</th>
+                <th style="text-align:center;">Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in todos_torneios | reverse %}
+            <tr {% if torneio_ativo and t.id == torneio_ativo.id %}style="background:#f5f3ff;"{% endif %}>
+                <td>
+                    <strong>{{ t.nome }}</strong>
+                    {% if torneio_ativo and t.id == torneio_ativo.id %}
+                        <span style="font-size:0.75rem; background:#6c3fc5; color:#fff;
+                                     padding:0.1rem 0.5rem; border-radius:999px; margin-left:0.4rem;">
+                            ativo
+                        </span>
+                    {% endif %}
+                </td>
+                <td style="text-align:center; color:#6b7280;">{{ t.times | length }}</td>
+                <td style="text-align:center; color:#6b7280;">{{ t.rodada }}</td>
+                <td style="text-align:center;">
+                    {% if t.campeao %}
+                        <span style="color:#166534; font-weight:600;">🏆 {{ t.campeao }}</span>
+                    {% else %}
+                        <span style="color:#92400e;">Em andamento</span>
+                    {% endif %}
+                </td>
+                <td style="text-align:center;">
+                    <div style="display:flex; gap:0.4rem; justify-content:center;">
+                        <a href="/ranking?torneio_id={{ t.id }}" class="btn btn-secundario"
+                           style="padding:0.25rem 0.6rem; font-size:0.8rem;">
+                            Ranking
+                        </a>
+                        {% if not torneio_ativo or t.id != torneio_ativo.id %}
+                            <form action="/torneio/ativar/{{ t.id }}" method="POST" style="margin:0;">
+                                <button type="submit" class="btn btn-primario"
+                                        style="padding:0.25rem 0.6rem; font-size:0.8rem;">
+                                    Retomar
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endif %}
 
 <script>
@@ -199,10 +215,7 @@ function atualizarSelecao() {
     const valido = n >= 2 && !impar;
 
     document.getElementById('contador-label').textContent =
-        n === 0 ? '0 times selecionados'
-        : n === 1 ? '1 time selecionado'
-        : `${n} times selecionados`;
-
+        n === 0 ? '0 times selecionados' : n === 1 ? '1 time selecionado' : `${n} times selecionados`;
     document.getElementById('aviso-impar').style.display = impar ? 'block' : 'none';
 
     const btn = document.getElementById('btn-gerar');
@@ -212,20 +225,14 @@ function atualizarSelecao() {
 
     checks.forEach(c => {
         const label = c.closest('label');
-        if (c.checked) {
-            label.style.borderColor = '#6c3fc5';
-            label.style.background = '#f5f3ff';
-        } else {
-            label.style.borderColor = '#e5e7eb';
-            label.style.background = '#fafafa';
-        }
+        label.style.borderColor = c.checked ? '#6c3fc5' : '#e5e7eb';
+        label.style.background  = c.checked ? '#f5f3ff' : '#fafafa';
     });
 }
 
 function selecionarTodos() {
     const checks = document.querySelectorAll('input[name="times_selecionados"]');
     const total = checks.length;
-    // se total for ímpar, deixa o último desmarcado
     checks.forEach((c, i) => { c.checked = total % 2 === 0 || i < total - 1; });
     atualizarSelecao();
 }

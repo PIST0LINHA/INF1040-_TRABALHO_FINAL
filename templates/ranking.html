@@ -4,12 +4,48 @@
 
 <h1 class="page-title">Ranking</h1>
 
+<!-- Seletor de torneio -->
+<div class="card" style="margin-bottom:1.5rem;">
+    <h2 style="font-size:1.1rem; color:#3b1fa3; margin-bottom:1.25rem;">Selecionar Torneio</h2>
+
+    {% if todos_torneios %}
+        <form action="/ranking" method="GET" style="display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap;">
+            <div style="flex:1; min-width:200px;">
+                <label for="torneio_id">Torneio</label>
+                <select id="torneio_id" name="torneio_id" style="margin-bottom:0;">
+                    <option value="">Selecione um torneio...</option>
+                    {% for t in todos_torneios | reverse %}
+                        <option value="{{ t.id }}" {{ "selected" if torneio_id == t.id else "" }}>
+                            {{ t.nome }}{% if t.campeao %} — 🏆 {{ t.campeao }}{% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="padding-bottom:1px;">
+                <button type="submit" class="btn btn-primario">Ver Ranking</button>
+            </div>
+        </form>
+    {% else %}
+        <p style="color:#9ca3af; font-size:0.9rem;">
+            Nenhum torneio criado ainda.
+            <a href="/torneio" style="color:#6c3fc5;">Criar torneio →</a>
+        </p>
+    {% endif %}
+</div>
+
+<!-- Tabela de classificação -->
+{% if torneio_selecionado %}
 <div class="card">
     <h2 style="font-size:1.1rem; color:#3b1fa3; margin-bottom:1.25rem;">
-        Classificação
+        {{ torneio_selecionado.nome }}
         <span style="font-size:0.85rem; font-weight:400; color:#9ca3af; margin-left:0.5rem;">
             {{ classificacao | length }} time{{ "s" if classificacao | length != 1 else "" }}
         </span>
+        {% if torneio_selecionado.campeao %}
+            <span style="font-size:0.85rem; font-weight:600; color:#92400e; margin-left:0.75rem;">
+                🏆 {{ torneio_selecionado.campeao }}
+            </span>
+        {% endif %}
     </h2>
 
     {% if classificacao %}
@@ -19,6 +55,7 @@
                     <th style="width:50px; text-align:center;">#</th>
                     <th>Time</th>
                     <th style="text-align:center;">Pts</th>
+                    <th style="text-align:center;">J</th>
                     <th style="text-align:center;">V</th>
                     <th style="text-align:center;">E</th>
                     <th style="text-align:center;">D</th>
@@ -33,23 +70,19 @@
                     <td style="text-align:center; font-weight:700; color:#6c3fc5;">
                         {% if loop.index == 1 %}🏆{% else %}{{ loop.index }}{% endif %}
                     </td>
-                    <td>
-                        <strong>{{ entrada.time }}</strong>
-                    </td>
+                    <td><strong>{{ entrada.time }}</strong></td>
                     <td style="text-align:center; font-weight:700; font-size:1.05rem; color:#3b1fa3;">
                         {{ entrada.pontos }}
                     </td>
+                    <td style="text-align:center; color:#6b7280;">{{ entrada.jogos }}</td>
                     <td style="text-align:center; color:#166534;">{{ entrada.vitorias }}</td>
                     <td style="text-align:center; color:#92400e;">{{ entrada.empates }}</td>
                     <td style="text-align:center; color:#991b1b;">{{ entrada.derrotas }}</td>
                     <td style="text-align:center;">{{ entrada['gols_marcados'] }}</td>
                     <td style="text-align:center;">{{ entrada['gols_sofridos'] }}</td>
                     <td style="text-align:center; font-weight:600;
-                        {% if entrada['gols_marcados'] - entrada['gols_sofridos'] > 0 %}color:#166534;
-                        {% elif entrada['gols_marcados'] - entrada['gols_sofridos'] < 0 %}color:#991b1b;
-                        {% endif %}">
-                        {% set saldo = entrada.gols_marcados - entrada.gols_sofridos %}
-                        {{ "+" if saldo > 0 else "" }}{{ saldo }}
+                        color:{% if entrada.saldo_gols > 0 %}#166534{% elif entrada.saldo_gols < 0 %}#991b1b{% else %}#6b7280{% endif %};">
+                        {{ "+" if entrada.saldo_gols > 0 else "" }}{{ entrada.saldo_gols }}
                     </td>
                 </tr>
                 {% endfor %}
@@ -57,14 +90,15 @@
         </table>
 
         <p style="margin-top:1rem; font-size:0.8rem; color:#9ca3af;">
-            Pts = Pontos &nbsp;·&nbsp; V = Vitórias &nbsp;·&nbsp; E = Empates &nbsp;·&nbsp;
+            Pts = Pontos &nbsp;·&nbsp; J = Jogos &nbsp;·&nbsp; V = Vitórias &nbsp;·&nbsp; E = Empates &nbsp;·&nbsp;
             D = Derrotas &nbsp;·&nbsp; GM = Gols Marcados &nbsp;·&nbsp; GS = Gols Sofridos &nbsp;·&nbsp; SG = Saldo de Gols
         </p>
     {% else %}
         <p style="color:#9ca3af; text-align:center; padding:2rem 0;">
-            Nenhuma partida registrada ainda. O ranking será exibido após o início do torneio.
+            Nenhuma partida registrada ainda neste torneio.
         </p>
     {% endif %}
 </div>
+{% endif %}
 
 {% endblock %}

@@ -14,7 +14,7 @@
 
 ## 📋 Descrição do Projeto
 
-Sistema de criação e gerenciamento de torneios esportivos. A partir de uma lista de times cadastrados, o sistema gera confrontos aleatórios, simula partidas, registra resultados e mantém um ranking atualizado. Ao final de cada rodada, o sistema avança para a próxima fase com base nos resultados.
+Sistema de criação e gerenciamento de torneios esportivos. A partir de uma lista de times cadastrados, o usuário seleciona quais participam do torneio, o sistema gera confrontos aleatórios, registra resultados manualmente ou de forma randomizada, mantém um ranking atualizado e avança as fases automaticamente até definir o campeão.
 
 ## ⚙️ Requisitos e Restrições
 
@@ -23,22 +23,24 @@ Sistema de criação e gerenciamento de torneios esportivos. A partir de uma lis
 - Bibliotecas de terceiros (ex.: frameworks de teste) são permitidas, desde que não exijam a programação de novas classes
 - Nenhuma outra linguagem além de Python é aceita
 
-## 🗂️ Estrutura de Módulos
+## 🗂️ Estrutura de Arquivos
 
 ```
 simulador_torneios/
 │
-├── times.py              # Módulo de gerenciamento de times
-├── partidas.py           # Módulo de simulação e registro de partidas
-├── torneios.py           # Módulo de gerenciamento de rodadas e fases
-├── ranking.py            # Módulo de classificação
+├── times.py              # Gerenciamento de times
+├── partidas.py           # Registro e consulta de partidas
+├── torneios.py           # Estado e lógica do torneio
+├── ranking.py            # Tabela de classificação
 │
-├── test_times.py         # Testador do módulo Times
-├── test_partidas.py      # Testador do módulo Partidas
-├── test_torneios.py      # Testador do módulo Torneios
-├── test_ranking.py       # Testador do módulo Ranking
+├── test_times.py         # Testes do módulo Times
+├── test_partidas.py      # Testes do módulo Partidas
+├── test_torneios.py      # Testes do módulo Torneios
+├── test_ranking.py       # Testes do módulo Ranking
 │
-└── main.py               # Programa principal (interface web / ponto de entrada)
+├── dados_iniciais.json   # Times pré-cadastrados carregados na inicialização
+├── main.py               # Roteamento web (ponto de entrada)
+└── templates/            # Páginas HTML
 ```
 
 ## 📦 Módulos
@@ -47,43 +49,59 @@ simulador_torneios/
 **Responsável:** Julia Kymie Dias Okada  
 **Testador:** `test_times.py`
 
-Gerencia o ciclo de vida dos times: criação, consulta, listagem e remoção.
+Gerencia o ciclo de vida dos times: criação, consulta, listagem e remoção. Na inicialização, carrega automaticamente os times definidos em `dados_iniciais.json`.
 
 | Função | Assinatura | Descrição |
 |--------|-----------|-----------|
-| `criar_time` | `(nome: str, jogadores: list[str]) → dict` | Cria um time com ID único gerado automaticamente |
-| `buscar_time` | `(identificador: str) → dict \| None` | Retorna os dados de um time pelo ID |
+| `criar_time` | `(nome: str, jogadores: list[str]) → dict \| str` | Cria um time com ID único; retorna o dict ou mensagem de erro |
+| `buscar_time` | `(identificador: str) → dict \| str` | Retorna os dados de um time pelo ID ou mensagem de erro |
 | `listar_times` | `() → list[dict]` | Retorna todos os times cadastrados |
-| `remover_time` | `(identificador: str) → bool` | Remove um time pelo ID |
+| `remover_time` | `(identificador: str) → str` | Remove um time pelo ID; retorna mensagem de sucesso ou erro |
 
 ---
 
-### `partidas.py` — Simulação e Registro de Partidas
+### `partidas.py` — Registro e Consulta de Partidas
 **Responsável:** Lucas Manoel Martins de Souza  
 **Testador:** `test_partidas.py`
 
-Simula partidas entre times e registra os resultados.
+Única fonte de verdade para o estado das partidas. Registra, filtra e expõe os resultados para os demais módulos.
 
 | Função | Assinatura | Descrição |
 |--------|-----------|-----------|
-| `simular_partida` | `(time1: str, time2: str) → dict` | Gera resultado aleatório de uma partida |
-| `gerar_resultado` | `(partida: dict) → str` | Formata o resultado de uma partida como string |
-| `registrar_resultado` | `(lista_partidas: list, time1: str, time2: str, gols_time1: int, gols_time2: int) → dict` | Insere o resultado em uma lista de partidas |
-| `listar_partidas` | `(lista_partidas: list) → list` | Lista todas as partidas registradas |
+| `registrar` | `(time1: str, time2: str, gols1: int, gols2: int, rodada=None) → dict \| str` | Valida e registra uma partida; retorna o dict criado ou mensagem de erro |
+| `listar` | `(filtro_time=None, filtro_rodada=None) → list[dict]` | Retorna partidas com filtros opcionais por time ou rodada |
+| `por_rodada` | `(rodada) → list[dict]` | Retorna todas as partidas de uma rodada específica |
+| `rodadas` | `() → list[str]` | Retorna a lista ordenada de rodadas com partidas registradas |
+| `resetar` | `() → None` | Limpa todas as partidas (usado ao reiniciar o torneio) |
 
 ---
 
-### `torneios.py` — Gerenciamento de Rodadas e Fases
+### `torneios.py` — Estado e Lógica do Torneio
 **Responsável:** Pedro Henrique Vargas Mucelin  
 **Testador:** `test_torneios.py`
 
-Controla o fluxo competitivo: geração de confrontos, rodadas e avanço de fases.
+Gerencia o estado do torneio em andamento e expõe funções puras para geração de confrontos e avanço de fases.
+
+**Funções de estado:**
+
+| Função | Assinatura | Descrição |
+|--------|-----------|-----------|
+| `iniciar` | `(nomes: list[str]) → None` | Inicia o torneio com os times selecionados (rodada 1) |
+| `get_confrontos` | `() → list[tuple]` | Retorna os confrontos da rodada atual |
+| `get_rodada` | `() → int` | Retorna o número da rodada atual |
+| `get_campeao` | `() → str \| None` | Retorna o campeão se o torneio encerrou, senão `None` |
+| `confrontos_pendentes` | `() → list[tuple]` | Retorna confrontos ainda sem resultado registrado |
+| `rodada_completa` | `() → bool` | `True` se todos os confrontos da rodada têm resultado |
+| `avancar` | `() → None` | Avança para a próxima fase ou define o campeão |
+| `resetar` | `() → None` | Zera o estado do torneio |
+
+**Funções puras:**
 
 | Função | Assinatura | Descrição |
 |--------|-----------|-----------|
 | `gerar_confronto` | `(lista_times: list[str]) → list[tuple]` | Gera pares de confronto aleatórios |
-| `iniciar_rodada` | `(confrontos: list[tuple]) → list[dict]` | Simula todas as partidas de uma rodada |
-| `avancar_fase` | `(resultados: list[dict]) → list[str]` | Seleciona os times classificados para a próxima fase |
+| `iniciar_rodada` | `(confrontos: list[tuple]) → list[dict]` | Simula resultados aleatórios para uma rodada |
+| `avancar_fase` | `(resultados: list[dict]) → list[str]` | Retorna os times classificados para a próxima fase |
 
 ---
 
@@ -91,59 +109,30 @@ Controla o fluxo competitivo: geração de confrontos, rodadas e avanço de fase
 **Responsável:** Maria Eduarda Fonte de Macedo  
 **Testador:** `test_ranking.py`
 
-Cria e mantém a tabela de classificação atualizada.
+Cria e mantém a tabela de classificação atualizada com pontos, vitórias, saldo de gols e demais estatísticas.
 
 | Função | Assinatura | Descrição |
 |--------|-----------|-----------|
-| `criar_tabela` | `(lista_times: list[str]) → list[dict]` | Inicializa tabela com todos os contadores zerados |
-| `atualizar_pontos` | `(tabela: list[dict], resultado: dict) → list[dict]` | Atualiza pontos após cada partida (vitória=3pts, empate=1pt) e retorna a tabela atualizada |
-| `ordenar_classificacao` | `(tabela: list[dict]) → list[dict]` | Ordena por pontos → vitórias → saldo de gols (sem modificar o original) |
-| `mostrar_classificacao` | `(tabela: list[dict]) → str` | Exibe a tabela formatada no terminal e retorna a tabela como string formatada |
+| `criar_tabela` | `(lista_times: list[str]) → int` | Inicializa tabela com todos os contadores zerados |
+| `atualizar_pontos` | `(resultado: dict) → int` | Atualiza pontos após cada partida (vitória=3pts, empate=1pt) |
+| `ordenar_classificacao` | `() → list[dict]` | Ordena por pontos → vitórias → saldo de gols (sem modificar o original) |
+| `mostrar_classificacao` | `() → int` | Exibe a tabela formatada no terminal |
 
----
-
-## 🌿 Branches
-
-Cada responsável trabalha na sua própria branch e passar para `main` quando o módulo estiver pronto.
-
-| Branch | Responsável | Conteúdo |
-|--------|-------------|----------|
-| `main` | — | Código estável e integrado |
-| `modulo/times` | Julia Kymie Dias Okada | `times.py` + `test_times.py` |
-| `modulo/partidas` | Lucas Manoel Martins de Souza | `partidas.py` + `test_partidas.py` |
-| `modulo/torneios` | Pedro Henrique Vargas Mucelin | `torneios.py` + `test_torneios.py` |
-| `modulo/ranking` | Maria Eduarda Fonte de Macedo | `ranking.py` + `test_ranking.py` |
-| `front` | Julia Kymie Dias Okada e Lucas Manoel Martins de Souza | `main.py` + `templates/` |
-
-### Fluxo de trabalho
-
-```bash
-# Criar e entrar na sua branch (exemplo para times)
-git checkout -b modulo/times
-
-# Trabalhar normalmente, commitar e subir
-git add times.py test_times.py
-git commit -m "feat: implementa módulo times"
-git push origin modulo/times
-```
 
 ---
 
 ## ✅ Executando os Testes
 
-Cada módulo (exceto o principal) possui seu próprio módulo testador. Para executar todos os testes:
-
 ```bash
-# Testes individuais por módulo
 python test_times.py
 python test_partidas.py
 python test_torneios.py
 python test_ranking.py
 ```
 
-Os módulos testadores devem ser executados sem erros e apresentar um relatório cobrindo todos os casos de teste previstos.
-
 > **Requisito:** cada função de acesso de cada módulo deve ter casos de teste que exercitem **todos os retornos previstos** pela sua interface.
+
+---
 
 ## 🧪 Casos de Teste
 
@@ -169,6 +158,30 @@ Os módulos testadores devem ser executados sem erros e apresentar um relatório
 
 ---
 
+### Módulo `partidas.py`
+
+**`registrar`**
+- ✅ Chamada correta → retorna `dict` com os dados da partida
+- ✅ Nome de time vazio → retorna mensagem de erro
+- ✅ Mesmo time duas vezes → retorna mensagem de erro
+- ✅ Partida já registrada na mesma rodada → retorna mensagem de erro
+
+**`listar`**
+- ✅ Sem filtros → retorna todas as partidas
+- ✅ Filtro por time → retorna apenas partidas daquele time
+- ✅ Filtro por rodada → retorna apenas partidas daquela rodada
+- ✅ Sem partidas → retorna `[]`
+
+**`por_rodada`**
+- ✅ Rodada com partidas → retorna lista de dicts
+- ✅ Rodada sem partidas → retorna `[]`
+
+**`rodadas`**
+- ✅ Com partidas registradas → retorna lista ordenada de rodadas
+- ✅ Sem partidas → retorna `[]`
+
+---
+
 ### Módulo `torneios.py`
 
 **`gerar_confronto`**
@@ -183,7 +196,7 @@ Os módulos testadores devem ser executados sem erros e apresentar um relatório
 
 **`avancar_fase`**
 - ✅ Vencedor claro → time com mais gols avança
-- ✅ Empate → ambos avançam (ou critério de desempate)
+- ✅ Empate → ambos avançam
 - ✅ Múltiplas partidas → cada vencedor avança
 
 ---
@@ -196,11 +209,11 @@ Os módulos testadores devem ser executados sem erros e apresentar um relatório
 - ✅ Lista vazia → retorna `[]` sem erros
 
 **`atualizar_pontos`**
-- ✅ Vitória do time1 → retorna tabela com time1: pontos=3, vitórias=1 / time2: pontos=0, derrotas=1
-- ✅ Vitória do time2 → retorna tabela com time2: pontos=3, vitórias=1 / time1: pontos=0, derrotas=1
-- ✅ Empate → retorna tabela com ambos: pontos=1, empates=1
-- ✅ Gols contabilizados → retorna tabela com `gols_marcados` e `gols_sofridos` atualizados
-- ✅ Acumulativo após múltiplas partidas → retorna tabela com totais somados corretamente
+- ✅ Vitória do time1 → time1: pontos=3, vitórias=1 / time2: pontos=0, derrotas=1
+- ✅ Vitória do time2 → time2: pontos=3, vitórias=1 / time1: pontos=0, derrotas=1
+- ✅ Empate → ambos: pontos=1, empates=1
+- ✅ Gols contabilizados → `gols_marcados` e `gols_sofridos` atualizados
+- ✅ Acumulativo após múltiplas partidas → totais somados corretamente
 
 **`ordenar_classificacao`**
 - ✅ Ordenação por pontos
@@ -209,52 +222,47 @@ Os módulos testadores devem ser executados sem erros e apresentar um relatório
 - ✅ Tabela original não é modificada
 
 **`mostrar_classificacao`**
-- ✅ Retorna a tabela formatada como string (não `None`)
+- ✅ Retorna 0 com sucesso
 - ✅ Tabela não é modificada após exibição
-- ✅ Tabela vazia → retorna string vazia ou mensagem, sem erros
+- ✅ Tabela vazia → sem erros
 
 ---
 
-### Módulo `partidas.py`
-
-**`simular_partida`**
-- ✅ Mesmo time duas vezes → `{"erro": "Um time não pode disputar contra si mesmo"}`
-- ✅ Nome de time vazio → `{"erro": "Nome dos times não pode ser vazio"}`
-- ✅ Chamada correta → `{"time1": ..., "time2": ..., "gols_time1": N, "gols_time2": N}`
-
-**`gerar_resultado`**
-- ✅ Partida com erro → retorna a mensagem de erro
-- ✅ Partida válida → ex.: `"Vasco 3 x Botafogo 5"`
-
-**`registrar_resultado`**
-- ✅ Mesmo time duas vezes → `{"erro": "Um time não pode disputar contra si mesmo"}`
-- ✅ Nome de time vazio → `{"erro": "Nome dos times não pode ser vazio"}`
-- ✅ Chamada correta → insere e retorna o dicionário da partida
-
-**`listar_partidas`**
-- ✅ Lista com partidas → retorna lista de dicionários
-- ✅ Lista vazia → `"Lista vazia"`
-
 ## 🔗 Testes de Integração
 
-Os testes integrados encadeiam funções de todos os módulos, garantindo que a comunicação entre eles ocorre corretamente.
-
-**Fluxo 1 — Rodada única:** criação de 4 times → tabela → confrontos → rodada → registro dos resultados → atualização dos pontos → exibição da classificação.
+**Fluxo 1 — Rodada única:** criação de 4 times → tabela → confrontos → registro dos resultados → atualização dos pontos → exibição da classificação.
 
 **Fluxo 2 — Torneio com avanço de fases:** 2 rodadas completas com classificados avançando entre fases, acumulando pontuação.
 
 **Fluxo 3 — Validação de erros:** nome inválido ao criar time e time disputando contra si mesmo não interrompem o sistema; erros são retornados de forma descritiva e os dados válidos são preservados.
 
+---
+
 ## 📐 Requisitos Não Funcionais
 
 - Sistema modular com responsabilidades separadas por domínio
 - Funções testáveis isoladamente
-- Validação de entradas inválidas com mensagens de erro descritivas (sem interromper a execução)
+- `main.py` sem lógica de negócio ou estado próprio — apenas roteamento
+- Validação de entradas inválidas com mensagens de erro descritivas
 - Sem efeitos colaterais inesperados sobre estruturas de dados compartilhadas
 - Nomenclatura padronizada em português
 
+---
+
 ## 🌐 Interface Web
 
-O sistema também pode ser acessado via interface web, onde é possível incluir, excluir, editar e gerenciar torneios e partidas.
+Acessível via navegador após executar `python main.py`.
 
 **Front-end:** Julia Kymie Dias Okada e Lucas Manoel Martins de Souza
+
+| Página | Funcionalidades |
+|--------|----------------|
+| **Times** | Cadastrar, buscar e remover times |
+| **Torneio** | Selecionar times participantes (número par obrigatório), gerar confrontos, avançar fase, reiniciar |
+| **Partidas** | Visualizar confrontos da rodada atual, registrar placar manualmente ou randomizar 🎲, filtrar histórico |
+| **Ranking** | Tabela de classificação com pontos, vitórias, empates, derrotas e saldo de gols |
+
+```bash
+python main.py
+# Acesse http://127.0.0.1:5000
+```

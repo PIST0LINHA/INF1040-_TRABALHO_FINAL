@@ -1,17 +1,10 @@
+import os
+import threading
 from flask import Flask, render_template, request, redirect, url_for
 
-import times
-import partidas
-import torneios
-import ranking
+from modulo import times, partidas, torneios, ranking
 
 app = Flask(__name__)
-
-lista_partidas = []
-confrontos_atuais = []
-resultados_rodada_atual = []
-campeao = None
-numero_rodada = 0
 
 
 @app.route("/")
@@ -59,59 +52,30 @@ def pagina_partidas():
     filtro_time = request.args.get("filtro_time", "").strip()
     filtro_rodada = request.args.get("filtro_rodada", "").strip()
 
-    partidas_filtradas = list(lista_partidas)
-    if filtro_time:
-        partidas_filtradas = [
-            p for p in partidas_filtradas
-            if p.get("time1", "").lower() == filtro_time.lower()
-            or p.get("time2", "").lower() == filtro_time.lower()
-        ]
-    if filtro_rodada:
-        partidas_filtradas = [
-            p for p in partidas_filtradas
-            if str(p.get("rodada", "")) == filtro_rodada
-        ]
-
-    rodadas = sorted({str(p.get("rodada", "")) for p in lista_partidas if p.get("rodada")})
-
-    confrontos_pendentes = []
-    for c in confrontos_atuais:
-        tem_resultado = any(
-            (p.get("time1") == c[0] and p.get("time2") == c[1]) or
-            (p.get("time1") == c[1] and p.get("time2") == c[0])
-            for p in lista_partidas if p.get("rodada") == numero_rodada
-        )
-        if not tem_resultado:
-            confrontos_pendentes.append(c)
-
-    partidas_rodada_atual = [p for p in lista_partidas if p.get("rodada") == numero_rodada]
+    torneio_ativo = torneios.get_ativo()
+    torneio_ativo_id = torneio_ativo["id"] if torneio_ativo else None
+    numero_rodada = torneios.get_rodada()
 
     return render_template(
         "partidas.html",
-        partidas=partidas_filtradas,
+        partidas=partidas.listar(filtro_time or None, filtro_rodada or None, torneio_id=torneio_ativo_id),
         todos_times=todos_times,
-        rodadas=rodadas,
+        rodadas=partidas.rodadas(torneio_id=torneio_ativo_id),
         filtro_time=filtro_time,
         filtro_rodada=filtro_rodada,
         msg=msg,
         tipo=tipo,
-        confrontos_atuais=confrontos_atuais,
-        confrontos_pendentes=confrontos_pendentes,
-        partidas_rodada_atual=partidas_rodada_atual,
+        confrontos_atuais=torneios.get_confrontos(),
+        confrontos_pendentes=torneios.confrontos_pendentes(),
+        partidas_rodada_atual=partidas.por_rodada(numero_rodada, torneio_id=torneio_ativo_id),
         numero_rodada=numero_rodada,
     )
 
 
 @app.route("/partidas/registrar", methods=["POST"])
 def registrar_partida():
-    global resultados_rodada_atual
     time1 = request.form.get("time1", "").strip()
     time2 = request.form.get("time2", "").strip()
-
-    if not time1 or not time2:
-        return redirect(url_for("pagina_partidas", msg="Erro: nomes dos times não podem ser vazios.", tipo="erro"))
-    if time1 == time2:
-        return redirect(url_for("pagina_partidas", msg="Erro: um time não pode disputar contra si mesmo.", tipo="erro"))
 
     try:
         gols1 = int(request.form.get("gols_time1", 0))
@@ -119,28 +83,24 @@ def registrar_partida():
     except ValueError:
         return redirect(url_for("pagina_partidas", msg="Erro: gols devem ser números inteiros.", tipo="erro"))
 
-    rodada_partida = None
-    for c in confrontos_atuais:
-        if (c[0] == time1 and c[1] == time2) or (c[1] == time1 and c[0] == time2):
-            ja_registrada = any(
-                (p.get("time1") == c[0] and p.get("time2") == c[1]) or
-                (p.get("time1") == c[1] and p.get("time2") == c[0])
-                for p in lista_partidas if p.get("rodada") == numero_rodada
-            )
-            if ja_registrada:
-                return redirect(url_for("pagina_partidas",
-                    msg=f"Partida {time1} × {time2} já foi registrada nesta rodada.", tipo="erro"))
-            rodada_partida = numero_rodada
-            break
+    torneio_ativo = torneios.get_ativo()
+    torneio_id = None
+    rodada = None
 
-    resultado = {"time1": time1, "time2": time2, "gols_time1": gols1, "gols_time2": gols2}
-    if rodada_partida:
-        resultado["rodada"] = rodada_partida
+    if torneio_ativo:
+        eh_confronto = any(
+            (c[0] == time1 and c[1] == time2) or (c[1] == time1 and c[0] == time2)
+            for c in torneios.get_confrontos()
+        )
+        if eh_confronto:
+            torneio_id = torneio_ativo["id"]
+            rodada = torneios.get_rodada()
 
-    lista_partidas.append(resultado)
-    ranking.atualizar_pontos(resultado)
-    resultados_rodada_atual = [p for p in lista_partidas if p.get("rodada") == numero_rodada]
+    resultado = partidas.registrar(time1, time2, gols1, gols2, rodada, torneio_id)
+    if isinstance(resultado, str):
+        return redirect(url_for("pagina_partidas", msg=resultado, tipo="erro"))
 
+    ranking.atualizar_pontos(resultado, torneio_id=torneio_id or "default")
     return redirect(url_for("pagina_partidas", msg="Partida registrada com sucesso.", tipo="sucesso"))
 
 
@@ -149,72 +109,86 @@ def pagina_torneio():
     todos_times = times.listar_times()
     msg = request.args.get("msg", "")
     tipo = request.args.get("tipo", "")
-    rodada_completa = len(confrontos_atuais) > 0 and len(resultados_rodada_atual) >= len(confrontos_atuais)
+    torneio_ativo = torneios.get_ativo()
     return render_template(
         "torneio.html",
         times=todos_times,
-        confrontos=confrontos_atuais,
-        resultados=resultados_rodada_atual,
-        campeao=campeao,
+        torneio_ativo=torneio_ativo,
+        todos_torneios=torneios.listar(),
+        confrontos=torneios.get_confrontos(),
+        resultados=partidas.por_rodada(
+            torneios.get_rodada(),
+            torneio_id=torneio_ativo["id"] if torneio_ativo else None
+        ),
+        campeao=torneios.get_campeao(),
         msg=msg,
         tipo=tipo,
-        numero_rodada=numero_rodada,
-        rodada_completa=rodada_completa,
+        numero_rodada=torneios.get_rodada(),
+        rodada_completa=torneios.rodada_completa(),
     )
 
 
 @app.route("/torneio/gerar", methods=["POST"])
 def gerar_confrontos():
-    global confrontos_atuais, resultados_rodada_atual, campeao, numero_rodada, lista_partidas
     nomes = request.form.getlist("times_selecionados")
+    nome_torneio = request.form.get("nome_torneio", "").strip()
     if len(nomes) < 2:
         return redirect(url_for("pagina_torneio", msg="Selecione pelo menos 2 times para gerar confrontos.", tipo="erro"))
     if len(nomes) % 2 != 0:
         return redirect(url_for("pagina_torneio", msg="Selecione um número par de times para gerar confrontos.", tipo="erro"))
-    ranking.criar_tabela(nomes)
-    confrontos_atuais = torneios.gerar_confronto(nomes)
-    resultados_rodada_atual = []
-    campeao = None
-    lista_partidas = []
-    numero_rodada = 1
+    torneio = torneios.criar(nome_torneio, nomes)
+    ranking.criar_tabela(nomes, torneio_id=torneio["id"])
+    return redirect(url_for("pagina_torneio"))
+
+
+@app.route("/torneio/ativar/<torneio_id>", methods=["POST"])
+def ativar_torneio(torneio_id):
+    torneios.set_ativo(torneio_id)
     return redirect(url_for("pagina_torneio"))
 
 
 @app.route("/torneio/avancar", methods=["POST"])
 def avancar_fase():
-    global confrontos_atuais, resultados_rodada_atual, campeao, numero_rodada
-    if len(resultados_rodada_atual) < len(confrontos_atuais):
+    if not torneios.rodada_completa():
         return redirect(url_for("pagina_torneio",
             msg="Registre os resultados de todas as partidas na página de Partidas antes de avançar.", tipo="erro"))
-    classificados = torneios.avancar_fase(resultados_rodada_atual)
-    if len(classificados) == 1:
-        campeao = classificados[0]
-        confrontos_atuais = []
-        resultados_rodada_atual = []
-    else:
-        numero_rodada += 1
-        confrontos_atuais = torneios.gerar_confronto(classificados)
-        resultados_rodada_atual = []
+    torneios.avancar()
     return redirect(url_for("pagina_torneio"))
 
 
 @app.route("/torneio/reiniciar", methods=["POST"])
 def reiniciar_torneio():
-    global lista_partidas, confrontos_atuais, resultados_rodada_atual, campeao, numero_rodada
-    lista_partidas = []
-    confrontos_atuais = []
-    resultados_rodada_atual = []
-    campeao = None
-    numero_rodada = 0
-    nomes = [t["nome"] for t in times.listar_times()]
-    ranking.criar_tabela(nomes)
+    torneio_ativo = torneios.get_ativo()
+    if torneio_ativo:
+        partidas.resetar(torneio_id=torneio_ativo["id"])
+        ranking.criar_tabela(torneio_ativo["times"], torneio_id=torneio_ativo["id"])
+    torneios.resetar_ativo()
     return redirect(url_for("pagina_torneio"))
 
 
 @app.route("/ranking")
 def pagina_ranking():
-    classificacao = ranking.ordenar_classificacao()
-    return render_template("ranking.html", classificacao=classificacao)
+    torneio_id = request.args.get("torneio_id", "").strip()
+    todos_torneios = torneios.listar()
+    classificacao = ranking.ordenar_classificacao(torneio_id) if torneio_id else []
+    torneio_selecionado = next((t for t in todos_torneios if t["id"] == torneio_id), None)
+    return render_template(
+        "ranking.html",
+        classificacao=classificacao,
+        todos_torneios=todos_torneios,
+        torneio_id=torneio_id,
+        torneio_selecionado=torneio_selecionado,
+    )
+
+
+@app.route("/encerrar", methods=["POST"])
+def encerrar():
+    times.salvar()
+    partidas.salvar()
+    torneios.salvar()
+    ranking.salvar()
+    threading.Timer(1.0, lambda: os._exit(0)).start()
+    return render_template("encerrar.html")
 
 
 if __name__ == "__main__":

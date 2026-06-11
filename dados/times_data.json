@@ -1,0 +1,141 @@
+{
+  "times": [
+    {
+      "id": "1",
+      "nome": "Flamengo",
+      "jogadores": [
+        "Rossi",
+        "Varela",
+        "Léo Ortiz",
+        "Léo Pereira",
+        "Ayrton Lucas",
+        "De la Cruz",
+        "Gerson",
+        "Pulgar",
+        "Arrascaeta",
+        "Plata",
+        "Pedro"
+      ]
+    },
+    {
+      "id": "2",
+      "nome": "Palmeiras",
+      "jogadores": [
+        "Weverton",
+        "Marcos Rocha",
+        "Murilo",
+        "Gustavo Gómez",
+        "Piquerez",
+        "Aníbal Moreno",
+        "Zé Rafael",
+        "Raphael Veiga",
+        "Estêvão",
+        "Flaco López",
+        "Rony"
+      ]
+    },
+    {
+      "id": "3",
+      "nome": "Atlético-MG",
+      "jogadores": [
+        "Everson",
+        "Saravia",
+        "Junior Alonso",
+        "Guilherme Arana",
+        "Otávio",
+        "Fausto Vera",
+        "Alan Franco",
+        "Paulinho",
+        "Bernard",
+        "Hulk",
+        "Deyverson"
+      ]
+    },
+    {
+      "id": "4",
+      "nome": "Grêmio",
+      "jogadores": [
+        "Marchesín",
+        "João Pedro",
+        "Kannemann",
+        "Rodrigo Ely",
+        "Reinaldo",
+        "Villasanti",
+        "Dodi",
+        "Cristaldo",
+        "Pepê",
+        "Soteldo",
+        "Diego Costa"
+      ]
+    },
+    {
+      "id": "5",
+      "nome": "São Paulo",
+      "jogadores": [
+        "Rafael",
+        "Rafinha",
+        "Arboleda",
+        "Alan Franco",
+        "Welington",
+        "Luiz Gustavo",
+        "Alisson",
+        "Rodrigo Nestor",
+        "Lucas",
+        "Calleri",
+        "Luciano"
+      ]
+    },
+    {
+      "id": "6",
+      "nome": "Internacional",
+      "jogadores": [
+        "Rochet",
+        "Bustos",
+        "Vitão",
+        "Mercado",
+        "Renê",
+        "Rômulo",
+        "Bruno Henrique",
+        "Thiago Maia",
+        "Alan Patrick",
+        "Wesley",
+        "Enner Valencia"
+      ]
+    },
+    {
+      "id": "7",
+      "nome": "Botafogo",
+      "jogadores": [
+        "John",
+        "Damián Suárez",
+        "Bastos",
+        "Alexander Barboza",
+        "Cuiabano",
+        "Gregore",
+        "Marlon Freitas",
+        "Tchê Tchê",
+        "Luiz Henrique",
+        "Tiquinho Soares",
+        "Jeffinho"
+      ]
+    },
+    {
+      "id": "8",
+      "nome": "Corinthians",
+      "jogadores": [
+        "Hugo Souza",
+        "Fagner",
+        "André Ramalho",
+        "Cacá",
+        "Hugo",
+        "Ryan",
+        "Raniele",
+        "Rodrigo Garro",
+        "Romero",
+        "Yuri Alberto",
+        "Memphis Depay"
+      ]
+    }
+  ],
+  "proximo_id": 9
+}

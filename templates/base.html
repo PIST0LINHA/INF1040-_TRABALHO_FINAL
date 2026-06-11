@@ -59,6 +59,24 @@
             font-weight: 700;
         }
 
+        .nav-spacer { flex: 1; }
+
+        .btn-encerrar {
+            background: rgba(239,68,68,0.18);
+            color: #fff;
+            border: 1.5px solid rgba(239,68,68,0.5);
+            padding: 0.4rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .btn-encerrar:hover {
+            background: rgba(239,68,68,0.45);
+        }
+
         .container {
             max-width: 1100px;
             margin: 2rem auto;
@@ -167,6 +185,13 @@
         <a href="/partidas" {% if request.path.startswith('/partidas') %}class="ativo"{% endif %}>Partidas</a>
         <a href="/torneio" {% if request.path.startswith('/torneio') %}class="ativo"{% endif %}>Torneio</a>
         <a href="/ranking" {% if request.path.startswith('/ranking') %}class="ativo"{% endif %}>Ranking</a>
+
+        <div class="nav-spacer"></div>
+
+        <form action="/encerrar" method="POST" style="margin:0;"
+              onsubmit="return confirm('Encerrar a aplicação? Todos os dados já estão salvos.')">
+            <button type="submit" class="btn-encerrar">&#x23FB; Encerrar</button>
+        </form>
     </nav>
 
     <div class="container">
