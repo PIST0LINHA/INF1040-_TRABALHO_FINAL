@@ -166,10 +166,11 @@ def pagina_torneio():
 @app.route("/torneio/gerar", methods=["POST"])
 def gerar_confrontos():
     global confrontos_atuais, resultados_rodada_atual, campeao, numero_rodada, lista_partidas
-    todos_times = times.listar_times()
-    if len(todos_times) < 2:
-        return redirect(url_for("pagina_torneio", msg="É necessário pelo menos 2 times para gerar confrontos.", tipo="erro"))
-    nomes = [t["nome"] for t in todos_times]
+    nomes = request.form.getlist("times_selecionados")
+    if len(nomes) < 2:
+        return redirect(url_for("pagina_torneio", msg="Selecione pelo menos 2 times para gerar confrontos.", tipo="erro"))
+    if len(nomes) % 2 != 0:
+        return redirect(url_for("pagina_torneio", msg="Selecione um número par de times para gerar confrontos.", tipo="erro"))
     ranking.criar_tabela(nomes)
     confrontos_atuais = torneios.gerar_confronto(nomes)
     resultados_rodada_atual = []

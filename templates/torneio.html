@@ -24,35 +24,66 @@
 
 {% else %}
 
-    <!-- Ações principais -->
+    {% if not confrontos %}
+    <!-- Seleção de times para iniciar torneio -->
+    <div class="card">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem;">
+            <h2 style="font-size:1.1rem; color:#3b1fa3; margin:0;">Iniciar Torneio</h2>
+            <span id="contador-label" style="font-size:0.85rem; color:#9ca3af;">
+                0 times selecionados
+            </span>
+        </div>
+
+        {% if times | length < 2 %}
+            <p style="color:#9ca3af; font-size:0.9rem;">
+                ⚠️ Você precisa de pelo menos 2 times cadastrados.
+                <a href="/times" style="color:#6c3fc5;">Cadastrar times →</a>
+            </p>
+        {% else %}
+            <form id="form-gerar" action="/torneio/gerar" method="POST">
+                <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap:0.6rem; margin-bottom:1.25rem;">
+                    {% for time in times %}
+                        <label id="label-{{ loop.index }}" style="display:flex; align-items:center; gap:0.6rem;
+                               border:2px solid #e5e7eb; border-radius:10px; padding:0.65rem 0.85rem;
+                               cursor:pointer; transition:border-color 0.15s, background 0.15s; background:#fafafa;">
+                            <input type="checkbox" name="times_selecionados" value="{{ time.nome }}"
+                                   onchange="atualizarSelecao()"
+                                   style="width:16px; height:16px; flex-shrink:0; margin:0; cursor:pointer; accent-color:#6c3fc5;">
+                            <span style="font-size:0.9rem; font-weight:600; color:#222;">{{ time.nome }}</span>
+                        </label>
+                    {% endfor %}
+                </div>
+
+                <div id="aviso-impar" style="display:none; font-size:0.85rem; color:#92400e;
+                     background:#fef3c7; border-left:3px solid #f59e0b; padding:0.5rem 0.75rem;
+                     border-radius:6px; margin-bottom:1rem;">
+                    Selecione um número par de times para gerar confrontos.
+                </div>
+
+                <div style="display:flex; gap:0.75rem; align-items:center;">
+                    <button id="btn-gerar" type="submit" class="btn btn-primario" disabled
+                            style="opacity:0.45; cursor:not-allowed;">
+                        Gerar Confrontos
+                    </button>
+                    <button type="button" class="btn btn-secundario" onclick="selecionarTodos()">
+                        Selecionar todos
+                    </button>
+                    <button type="button" class="btn btn-secundario" onclick="limparSelecao()">
+                        Limpar
+                    </button>
+                </div>
+            </form>
+        {% endif %}
+    </div>
+
+    {% else %}
+    <!-- Torneio em andamento — ações -->
     <div class="card">
         <h2 style="font-size:1.1rem; color:#3b1fa3; margin-bottom:1.25rem;">Ações</h2>
-
         <div style="display:flex; flex-wrap:wrap; gap:0.75rem; align-items:center;">
 
-            <!-- Gerar Confrontos -->
-            {% if times | length < 2 %}
-                <span class="btn btn-secundario" style="opacity:0.5; cursor:not-allowed;"
-                      title="Cadastre pelo menos 2 times para gerar confrontos.">
-                    Gerar Confrontos
-                </span>
-            {% else %}
-                <form action="/torneio/gerar" method="POST" style="margin:0;">
-                    <button type="submit" class="btn btn-primario">Gerar Confrontos</button>
-                </form>
-            {% endif %}
+            <a href="/partidas" class="btn btn-sucesso">Registrar Partidas →</a>
 
-                <!-- Registrar Partidas -->
-            {% if confrontos %}
-                <a href="/partidas" class="btn btn-sucesso">Registrar Partidas →</a>
-            {% else %}
-                <span class="btn btn-sucesso" style="opacity:0.5; cursor:not-allowed;"
-                      title="Gere os confrontos primeiro.">
-                    Registrar Partidas
-                </span>
-            {% endif %}
-
-            <!-- Avançar Fase -->
             {% if rodada_completa %}
                 <form action="/torneio/avancar" method="POST" style="margin:0;">
                     <button type="submit" class="btn btn-aviso">Avançar Fase</button>
@@ -66,23 +97,15 @@
 
             <div style="flex:1;"></div>
 
-            <!-- Reiniciar -->
             <form action="/torneio/reiniciar" method="POST" style="margin:0;">
                 <button type="submit" class="btn btn-perigo"
                         onclick="return confirm('Reiniciar o torneio? Partidas e ranking serão apagados, mas os times serão mantidos.')">
                     Reiniciar Torneio
                 </button>
             </form>
-
         </div>
-
-        {% if times | length < 2 %}
-            <p style="margin-top:0.75rem; font-size:0.85rem; color:#9ca3af;">
-                ⚠️ Você precisa de pelo menos 2 times cadastrados para iniciar um torneio.
-                <a href="/times" style="color:#6c3fc5;">Cadastrar times →</a>
-            </p>
-        {% endif %}
     </div>
+    {% endif %}
 
     <!-- Confrontos da rodada atual -->
     {% if confrontos %}
@@ -92,11 +115,6 @@
                 <span style="font-size:0.85rem; font-weight:400; color:#9ca3af; margin-left:0.5rem;">
                     {{ confrontos | length }} jogo{{ "s" if confrontos | length != 1 else "" }}
                 </span>
-                {% if not rodada_completa %}
-                    <a href="/partidas" style="font-size:0.85rem; font-weight:500; color:#6c3fc5; margin-left:1rem;">
-                        → Registrar resultados
-                    </a>
-                {% endif %}
             </h2>
             <table>
                 <thead>
@@ -170,32 +188,52 @@
         </div>
     {% endif %}
 
-    <!-- Times no torneio -->
-    <div class="card">
-        <h2 style="font-size:1.1rem; color:#3b1fa3; margin-bottom:1.25rem;">
-            Times cadastrados
-            <span style="font-size:0.85rem; font-weight:400; color:#9ca3af; margin-left:0.5rem;">
-                {{ times | length }} time{{ "s" if times | length != 1 else "" }}
-            </span>
-        </h2>
-
-        {% if times %}
-            <div style="display:flex; flex-wrap:wrap; gap:0.5rem;">
-                {% for time in times %}
-                    <span style="background:#f5f3ff; color:#3b1fa3; border:1px solid #ddd5f7;
-                                 padding:0.35rem 0.85rem; border-radius:999px; font-size:0.9rem; font-weight:600;">
-                        {{ time.nome }}
-                    </span>
-                {% endfor %}
-            </div>
-        {% else %}
-            <p style="color:#9ca3af; text-align:center; padding:1rem 0;">
-                Nenhum time cadastrado ainda.
-                <a href="/times" style="color:#6c3fc5;">Cadastrar times →</a>
-            </p>
-        {% endif %}
-    </div>
-
 {% endif %}
+
+<script>
+function atualizarSelecao() {
+    const checks = document.querySelectorAll('input[name="times_selecionados"]');
+    const selecionados = [...checks].filter(c => c.checked);
+    const n = selecionados.length;
+    const impar = n > 0 && n % 2 !== 0;
+    const valido = n >= 2 && !impar;
+
+    document.getElementById('contador-label').textContent =
+        n === 0 ? '0 times selecionados'
+        : n === 1 ? '1 time selecionado'
+        : `${n} times selecionados`;
+
+    document.getElementById('aviso-impar').style.display = impar ? 'block' : 'none';
+
+    const btn = document.getElementById('btn-gerar');
+    btn.disabled = !valido;
+    btn.style.opacity = valido ? '1' : '0.45';
+    btn.style.cursor = valido ? 'pointer' : 'not-allowed';
+
+    checks.forEach(c => {
+        const label = c.closest('label');
+        if (c.checked) {
+            label.style.borderColor = '#6c3fc5';
+            label.style.background = '#f5f3ff';
+        } else {
+            label.style.borderColor = '#e5e7eb';
+            label.style.background = '#fafafa';
+        }
+    });
+}
+
+function selecionarTodos() {
+    const checks = document.querySelectorAll('input[name="times_selecionados"]');
+    const total = checks.length;
+    // se total for ímpar, deixa o último desmarcado
+    checks.forEach((c, i) => { c.checked = total % 2 === 0 || i < total - 1; });
+    atualizarSelecao();
+}
+
+function limparSelecao() {
+    document.querySelectorAll('input[name="times_selecionados"]').forEach(c => c.checked = false);
+    atualizarSelecao();
+}
+</script>
 
 {% endblock %}
