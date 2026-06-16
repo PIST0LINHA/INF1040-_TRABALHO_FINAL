@@ -1,8 +1,12 @@
 import os
 import threading
 from flask import Flask, render_template, request, redirect, url_for
+import times, partidas, torneios, ranking
 
-from modulo import times, partidas, torneios, ranking
+times.inicializar()
+partidas.inicializar()
+ranking.inicializar()
+torneios.inicializar()
 
 app = Flask(__name__)
 
@@ -29,7 +33,7 @@ def pagina_times():
 def criar_time():
     nome = request.form.get("nome", "").strip()
     jogadores_raw = request.form.get("jogadores", "").strip()
-    jogadores = [j.strip() for j in jogadores_raw.split(",") if j.strip()] if jogadores_raw else []
+    jogadores = times.parsear_jogadores(jogadores_raw)
     resultado = times.criar_time(nome, jogadores)
     if isinstance(resultado, dict):
         return redirect(url_for("pagina_times", msg=f"Time '{resultado['nome']}' criado com sucesso.", tipo="sucesso"))
@@ -51,18 +55,23 @@ def pagina_partidas():
     tipo = request.args.get("tipo", "")
     filtro_time = request.args.get("filtro_time", "").strip()
     filtro_rodada = request.args.get("filtro_rodada", "").strip()
+    filtro_torneio = request.args.get("filtro_torneio", "").strip()
 
     torneio_ativo = torneios.get_ativo()
     torneio_ativo_id = torneio_ativo["id"] if torneio_ativo else None
     numero_rodada = torneios.get_rodada()
 
+    torneio_id_historico = filtro_torneio or None
+
     return render_template(
         "partidas.html",
-        partidas=partidas.listar(filtro_time or None, filtro_rodada or None, torneio_id=torneio_ativo_id),
+        partidas=partidas.listar(filtro_time or None, filtro_rodada or None, torneio_id=torneio_id_historico),
         todos_times=todos_times,
-        rodadas=partidas.rodadas(torneio_id=torneio_ativo_id),
+        todos_torneios=torneios.listar(),
+        rodadas=partidas.rodadas(torneio_id=torneio_id_historico),
         filtro_time=filtro_time,
         filtro_rodada=filtro_rodada,
+        filtro_torneio=filtro_torneio,
         msg=msg,
         tipo=tipo,
         confrontos_atuais=torneios.get_confrontos(),
@@ -83,18 +92,7 @@ def registrar_partida():
     except ValueError:
         return redirect(url_for("pagina_partidas", msg="Erro: gols devem ser números inteiros.", tipo="erro"))
 
-    torneio_ativo = torneios.get_ativo()
-    torneio_id = None
-    rodada = None
-
-    if torneio_ativo:
-        eh_confronto = any(
-            (c[0] == time1 and c[1] == time2) or (c[1] == time1 and c[0] == time2)
-            for c in torneios.get_confrontos()
-        )
-        if eh_confronto:
-            torneio_id = torneio_ativo["id"]
-            rodada = torneios.get_rodada()
+    torneio_id, rodada = torneios.contexto_partida(time1, time2)
 
     resultado = partidas.registrar(time1, time2, gols1, gols2, rodada, torneio_id)
     if isinstance(resultado, str):
@@ -132,11 +130,9 @@ def pagina_torneio():
 def gerar_confrontos():
     nomes = request.form.getlist("times_selecionados")
     nome_torneio = request.form.get("nome_torneio", "").strip()
-    if len(nomes) < 2:
-        return redirect(url_for("pagina_torneio", msg="Selecione pelo menos 2 times para gerar confrontos.", tipo="erro"))
-    if len(nomes) % 2 != 0:
-        return redirect(url_for("pagina_torneio", msg="Selecione um número par de times para gerar confrontos.", tipo="erro"))
     torneio = torneios.criar(nome_torneio, nomes)
+    if isinstance(torneio, str):
+        return redirect(url_for("pagina_torneio", msg=torneio, tipo="erro"))
     ranking.criar_tabela(nomes, torneio_id=torneio["id"])
     return redirect(url_for("pagina_torneio"))
 
@@ -163,6 +159,12 @@ def reiniciar_torneio():
         partidas.resetar(torneio_id=torneio_ativo["id"])
         ranking.criar_tabela(torneio_ativo["times"], torneio_id=torneio_ativo["id"])
     torneios.resetar_ativo()
+    return redirect(url_for("pagina_torneio"))
+
+
+@app.route("/torneio/encerrar", methods=["POST"])
+def encerrar_torneio():
+    torneios.desativar()
     return redirect(url_for("pagina_torneio"))
 
 

@@ -104,6 +104,18 @@
     <form action="/partidas" method="GET" style="display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap;">
 
         <div style="flex:1; min-width:160px;">
+            <label for="filtro_torneio">Por torneio</label>
+            <select id="filtro_torneio" name="filtro_torneio" style="margin-bottom:0;">
+                <option value="">Todos os torneios</option>
+                {% for t in todos_torneios %}
+                    <option value="{{ t.id }}" {{ "selected" if filtro_torneio == t.id else "" }}>
+                        {{ t.nome }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="flex:1; min-width:160px;">
             <label for="filtro_time">Por time</label>
             <select id="filtro_time" name="filtro_time" style="margin-bottom:0;">
                 <option value="">Todos os times</option>
@@ -141,7 +153,7 @@
         Histórico
         <span style="font-size:0.85rem; font-weight:400; color:#9ca3af; margin-left:0.5rem;">
             {{ partidas|length }} partida{{ "s" if partidas|length != 1 else "" }}
-            {% if filtro_time or filtro_rodada %}
+            {% if filtro_time or filtro_rodada or filtro_torneio %}
                 <span style="color:#6c3fc5;">(filtrado)</span>
             {% endif %}
         </span>
@@ -188,7 +200,7 @@
         </table>
     {% else %}
         <p style="color:#9ca3af; text-align:center; padding:2rem 0;">
-            {% if filtro_time or filtro_rodada %}
+            {% if filtro_time or filtro_rodada or filtro_torneio %}
                 Nenhuma partida encontrada para este filtro.
             {% else %}
                 Nenhuma partida registrada ainda. Inicie um torneio para criar partidas! 

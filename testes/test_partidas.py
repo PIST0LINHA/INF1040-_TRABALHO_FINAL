@@ -1,5 +1,5 @@
 import sys, os; sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from modulo import partidas
+import partidas
 
 resultados = []
 
@@ -12,7 +12,7 @@ def resetar_estado():
     partidas.resetar()
 
 
-# ==================== registrar ====================
+# --- registrar ---
 
 def teste_registrar_partida_valida():
     resetar_estado()
@@ -52,11 +52,11 @@ def teste_registrar_duplicata_na_rodada():
     resetar_estado()
     partidas.registrar("Flamengo", "Vasco", 2, 0, rodada=1)
     resultado = partidas.registrar("Flamengo", "Vasco", 1, 1, rodada=1)
-    passou = isinstance(resultado, str) and not resultado.startswith("Erro")
+    passou = isinstance(resultado, str) and "já foi registrada" in resultado
     registrar("registrar: partida duplicada na mesma rodada retorna mensagem de erro", passou, str(resultado))
 
 
-# ==================== listar ====================
+# --- listar ---
 
 def teste_listar_sem_filtro():
     resetar_estado()
@@ -95,7 +95,7 @@ def teste_listar_vazio():
     registrar("listar: sem partidas retorna lista vazia", passou, str(lista))
 
 
-# ==================== por_rodada ====================
+# --- por_rodada ---
 
 def teste_por_rodada_com_partidas():
     resetar_estado()
@@ -114,7 +114,7 @@ def teste_por_rodada_inexistente():
     registrar("por_rodada: rodada sem partidas retorna lista vazia", passou, str(lista))
 
 
-# ==================== rodadas ====================
+# --- rodadas ---
 
 def teste_rodadas_com_dados():
     resetar_estado()
@@ -141,7 +141,48 @@ def teste_rodadas_sem_dados():
     registrar("rodadas: sem partidas retorna lista vazia", passou, str(r))
 
 
-# ==================== EXECUÇÃO ====================
+# --- inicializar / salvar ---
+
+def teste_inicializar_retorna_inteiro():
+    resultado = partidas.inicializar()
+    passou = isinstance(resultado, int)
+    registrar("inicializar: retorna int (0 se arquivo existe, 1 se não existe)", passou, str(resultado))
+
+
+def teste_salvar_retorna_zero():
+    resetar_estado()
+    partidas.registrar("Flamengo", "Vasco", 1, 0)
+    resultado = partidas.salvar()
+    passou = resultado == 0
+    registrar("salvar: persiste dados e retorna 0", passou, str(resultado))
+
+
+# --- resetar ---
+
+def teste_resetar_remove_todas_as_partidas():
+    resetar_estado()
+    partidas.registrar("Flamengo", "Vasco", 1, 0)
+    partidas.registrar("Fluminense", "Botafogo", 2, 1)
+    resultado = partidas.resetar()
+    passou = resultado == 0 and partidas.listar() == []
+    registrar("resetar: sem argumento remove todas as partidas", passou, str(partidas.listar()))
+
+
+def teste_resetar_por_torneio():
+    resetar_estado()
+    partidas.registrar("Flamengo", "Vasco", 1, 0, rodada=1, torneio_id="t1")
+    partidas.registrar("Fluminense", "Botafogo", 2, 1, rodada=1, torneio_id="t2")
+    resultado = partidas.resetar(torneio_id="t1")
+    lista_restante = partidas.listar()
+    passou = (
+        resultado == 0
+        and len(lista_restante) == 1
+        and lista_restante[0].get("torneio_id") == "t2"
+    )
+    registrar("resetar: com torneio_id remove apenas partidas daquele torneio", passou, str(lista_restante))
+
+
+# --- execução ---
 
 def executar_testes():
     testes = [
@@ -159,6 +200,10 @@ def executar_testes():
         teste_rodadas_com_dados,
         teste_rodadas_ordenadas,
         teste_rodadas_sem_dados,
+        teste_resetar_remove_todas_as_partidas,
+        teste_resetar_por_torneio,
+        teste_inicializar_retorna_inteiro,
+        teste_salvar_retorna_zero,
     ]
 
     for teste in testes:
