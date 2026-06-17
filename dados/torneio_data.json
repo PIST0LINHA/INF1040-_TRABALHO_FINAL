@@ -1,5 +1,23 @@
 {
-  "torneios": [],
-  "proximo_id": 1,
+  "torneios": [
+    {
+      "id": "1",
+      "nome": "Brasileirão Cup",
+      "times": [
+        "Flamengo",
+        "Palmeiras",
+        "Atlético-MG",
+        "Grêmio",
+        "São Paulo",
+        "Internacional",
+        "Botafogo",
+        "Corinthians"
+      ],
+      "rodada": 3,
+      "campeao": "Flamengo",
+      "confrontos": []
+    }
+  ],
+  "proximo_id": 2,
   "torneio_ativo_id": null
 }

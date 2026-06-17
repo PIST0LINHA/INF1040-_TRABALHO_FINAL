@@ -1,1 +1,9 @@
-[]
+[
+  { "time1": "Flamengo",    "time2": "Palmeiras",   "gols_time1": 2, "gols_time2": 1, "rodada": 1, "torneio_id": "1" },
+  { "time1": "Atlético-MG", "time2": "Grêmio",      "gols_time1": 3, "gols_time2": 0, "rodada": 1, "torneio_id": "1" },
+  { "time1": "São Paulo",   "time2": "Internacional","gols_time1": 1, "gols_time2": 2, "rodada": 1, "torneio_id": "1" },
+  { "time1": "Botafogo",    "time2": "Corinthians",  "gols_time1": 2, "gols_time2": 0, "rodada": 1, "torneio_id": "1" },
+  { "time1": "Flamengo",    "time2": "Atlético-MG",  "gols_time1": 1, "gols_time2": 0, "rodada": 2, "torneio_id": "1" },
+  { "time1": "Internacional","time2": "Botafogo",    "gols_time1": 0, "gols_time2": 1, "rodada": 2, "torneio_id": "1" },
+  { "time1": "Flamengo",    "time2": "Botafogo",     "gols_time1": 3, "gols_time2": 1, "rodada": 3, "torneio_id": "1" }
+]

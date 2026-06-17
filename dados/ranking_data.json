@@ -1,1 +1,12 @@
-{}
+{
+  "1": [
+    { "time": "Flamengo",     "pontos": 9, "jogos": 3, "vitorias": 3, "empates": 0, "derrotas": 0, "gols_marcados": 6, "gols_sofridos": 2, "saldo_gols":  4 },
+    { "time": "Botafogo",     "pontos": 6, "jogos": 3, "vitorias": 2, "empates": 0, "derrotas": 1, "gols_marcados": 4, "gols_sofridos": 3, "saldo_gols":  1 },
+    { "time": "Atlético-MG",  "pontos": 3, "jogos": 2, "vitorias": 1, "empates": 0, "derrotas": 1, "gols_marcados": 3, "gols_sofridos": 1, "saldo_gols":  2 },
+    { "time": "Internacional","pontos": 3, "jogos": 2, "vitorias": 1, "empates": 0, "derrotas": 1, "gols_marcados": 2, "gols_sofridos": 2, "saldo_gols":  0 },
+    { "time": "Palmeiras",    "pontos": 0, "jogos": 1, "vitorias": 0, "empates": 0, "derrotas": 1, "gols_marcados": 1, "gols_sofridos": 2, "saldo_gols": -1 },
+    { "time": "São Paulo",    "pontos": 0, "jogos": 1, "vitorias": 0, "empates": 0, "derrotas": 1, "gols_marcados": 1, "gols_sofridos": 2, "saldo_gols": -1 },
+    { "time": "Corinthians",  "pontos": 0, "jogos": 1, "vitorias": 0, "empates": 0, "derrotas": 1, "gols_marcados": 0, "gols_sofridos": 2, "saldo_gols": -2 },
+    { "time": "Grêmio",       "pontos": 0, "jogos": 1, "vitorias": 0, "empates": 0, "derrotas": 1, "gols_marcados": 0, "gols_sofridos": 3, "saldo_gols": -3 }
+  ]
+}
