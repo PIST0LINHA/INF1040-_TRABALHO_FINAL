@@ -99,43 +99,50 @@ def teste_desativar_remove_ativo():
     registrar("desativar: retorna 0 e remove o torneio ativo", passou, str(resultado))
 
 
-# --- get_confrontos / get_rodada / get_campeao ---
+# --- get_ativo campos: confrontos / rodada / campeao ---
 
-def teste_get_confrontos_retorna_lista_do_ativo():
+def teste_get_ativo_confrontos_retorna_lista_do_ativo():
     resetar_estado()
     torneios.criar("T1", ["A", "B"])
-    confrontos = torneios.get_confrontos()
+    ativo = torneios.get_ativo()
+    confrontos = ativo["confrontos"] if ativo else []
     passou = isinstance(confrontos, list) and len(confrontos) == 1
-    registrar("get_confrontos: retorna confrontos do torneio ativo", passou, str(confrontos))
+    registrar("get_ativo: campo confrontos retorna lista do torneio ativo", passou, str(confrontos))
 
 
-def teste_get_confrontos_sem_ativo_retorna_vazio():
+def teste_get_ativo_none_confrontos_vazio():
     resetar_estado()
-    passou = torneios.get_confrontos() == []
-    registrar("get_confrontos: sem torneio ativo retorna lista vazia", passou)
+    ativo = torneios.get_ativo()
+    confrontos = ativo["confrontos"] if ativo else []
+    passou = confrontos == []
+    registrar("get_ativo: None sem torneio ativo resulta em confrontos vazio", passou)
 
 
-def teste_get_rodada_retorna_rodada_atual():
-    resetar_estado()
-    torneios.criar("T1", ["A", "B"])
-    passou = torneios.get_rodada() == 1
-    registrar("get_rodada: retorna 1 na primeira rodada", passou, str(torneios.get_rodada()))
-
-
-def teste_get_rodada_sem_ativo_retorna_zero():
-    resetar_estado()
-    passou = torneios.get_rodada() == 0
-    registrar("get_rodada: sem torneio ativo retorna 0", passou, str(torneios.get_rodada()))
-
-
-def teste_get_campeao_sem_campeao_retorna_none():
+def teste_get_ativo_rodada_retorna_rodada_atual():
     resetar_estado()
     torneios.criar("T1", ["A", "B"])
-    passou = torneios.get_campeao() is None
-    registrar("get_campeao: sem campeão definido retorna None", passou, str(torneios.get_campeao()))
+    ativo = torneios.get_ativo()
+    passou = ativo is not None and ativo["rodada"] == 1
+    registrar("get_ativo: campo rodada retorna 1 na primeira rodada", passou, str(ativo))
 
 
-# --- confrontos_pendentes / rodada_completa ---
+def teste_get_ativo_none_rodada_zero():
+    resetar_estado()
+    ativo = torneios.get_ativo()
+    rodada = ativo["rodada"] if ativo else 0
+    passou = rodada == 0
+    registrar("get_ativo: None sem torneio ativo resulta em rodada 0", passou, str(rodada))
+
+
+def teste_get_ativo_campeao_sem_campeao_retorna_none():
+    resetar_estado()
+    torneios.criar("T1", ["A", "B"])
+    ativo = torneios.get_ativo()
+    passou = ativo is not None and ativo["campeao"] is None
+    registrar("get_ativo: campo campeao sem campeão definido retorna None", passou, str(ativo))
+
+
+# --- confrontos_pendentes ---
 
 def teste_confrontos_pendentes_sem_resultados():
     resetar_estado()
@@ -145,20 +152,21 @@ def teste_confrontos_pendentes_sem_resultados():
     registrar("confrontos_pendentes: retorna confrontos sem resultado registrado", passou, str(pendentes))
 
 
-def teste_rodada_completa_falso_sem_resultados():
+def teste_confrontos_pendentes_falso_sem_resultados():
     resetar_estado()
     torneios.criar("T1", ["A", "B"])
-    passou = torneios.rodada_completa() is False
-    registrar("rodada_completa: retorna False sem resultados registrados", passou)
+    passou = len(torneios.confrontos_pendentes()) > 0
+    registrar("confrontos_pendentes: retorna lista não vazia sem resultados registrados", passou)
 
 
-def teste_rodada_completa_verdadeiro_apos_registrar():
+def teste_confrontos_pendentes_vazio_apos_registrar():
     resetar_estado()
     t = torneios.criar("T1", ["A", "B"])
-    c = torneios.get_confrontos()[0]
+    ativo = torneios.get_ativo()
+    c = ativo["confrontos"][0]
     partidas.registrar(c[0], c[1], 1, 0, rodada=1, torneio_id=t["id"])
-    passou = torneios.rodada_completa() is True
-    registrar("rodada_completa: retorna True após registrar todos os resultados", passou)
+    passou = torneios.confrontos_pendentes() == []
+    registrar("confrontos_pendentes: retorna lista vazia após registrar todos os resultados", passou)
 
 
 # --- resetar_ativo ---
@@ -166,13 +174,15 @@ def teste_rodada_completa_verdadeiro_apos_registrar():
 def teste_resetar_ativo_reinicia_torneio():
     resetar_estado()
     t = torneios.criar("T1", ["A", "B"])
-    c = torneios.get_confrontos()[0]
+    ativo = torneios.get_ativo()
+    c = ativo["confrontos"][0]
     partidas.registrar(c[0], c[1], 2, 0, rodada=1, torneio_id=t["id"])
     resultado = torneios.resetar_ativo()
+    ativo = torneios.get_ativo()
     passou = (
         resultado == 0
-        and torneios.get_rodada() == 1
-        and torneios.get_campeao() is None
+        and ativo["rodada"] == 1
+        and ativo["campeao"] is None
     )
     registrar("resetar_ativo: reinicia rodada e campeão do torneio ativo", passou, str(resultado))
 
@@ -215,27 +225,31 @@ def teste_get_ativo_retorna_none_sem_ativo():
     registrar("get_ativo: sem torneio ativo retorna None", passou)
 
 
-# --- eh_confronto_ativo ---
+# --- contexto_partida (substitui eh_confronto_ativo) ---
 
-def teste_eh_confronto_ativo_verdadeiro():
+def teste_contexto_partida_par_valido_retorna_dados():
     resetar_estado()
     torneios.criar("T_conf", ["A", "B"])
-    c = torneios.get_confrontos()[0]
-    passou = torneios.eh_confronto_ativo(c[0], c[1]) is True
-    registrar("eh_confronto_ativo: par válido retorna True", passou, str(c))
+    ativo = torneios.get_ativo()
+    c = ativo["confrontos"][0]
+    torneio_id, rodada = torneios.contexto_partida(c[0], c[1])
+    passou = torneio_id is not None and rodada is not None
+    registrar("contexto_partida: par válido retorna (torneio_id, rodada) não nulos", passou, str(c))
 
 
-def teste_eh_confronto_ativo_falso():
+def teste_contexto_partida_par_invalido_retorna_none():
     resetar_estado()
     torneios.criar("T_conf2", ["A", "B"])
-    passou = torneios.eh_confronto_ativo("X", "Y") is False
-    registrar("eh_confronto_ativo: par inválido retorna False", passou)
+    torneio_id, rodada = torneios.contexto_partida("X", "Y")
+    passou = torneio_id is None and rodada is None
+    registrar("contexto_partida: par inválido retorna (None, None)", passou)
 
 
-def teste_eh_confronto_ativo_sem_torneio():
+def teste_contexto_partida_sem_torneio_retorna_none():
     resetar_estado()
-    passou = torneios.eh_confronto_ativo("A", "B") is False
-    registrar("eh_confronto_ativo: sem torneio ativo retorna False", passou)
+    torneio_id, rodada = torneios.contexto_partida("A", "B")
+    passou = torneio_id is None and rodada is None
+    registrar("contexto_partida: sem torneio ativo retorna (None, None)", passou)
 
 
 # --- contexto_partida ---
@@ -243,7 +257,8 @@ def teste_eh_confronto_ativo_sem_torneio():
 def teste_contexto_partida_confronto_ativo():
     resetar_estado()
     t = torneios.criar("T_ctx", ["A", "B"])
-    c = torneios.get_confrontos()[0]
+    ativo = torneios.get_ativo()
+    c = ativo["confrontos"][0]
     torneio_id, rodada = torneios.contexto_partida(c[0], c[1])
     passou = torneio_id == t["id"] and rodada == 1
     registrar("contexto_partida: confronto ativo retorna (torneio_id, rodada)", passou,
@@ -278,27 +293,31 @@ def teste_avancar_sem_torneio_ativo_retorna_um():
 def teste_avancar_define_campeao():
     resetar_estado()
     t = torneios.criar("Final", ["A", "B"])
-    c = torneios.get_confrontos()[0]
+    ativo = torneios.get_ativo()
+    c = ativo["confrontos"][0]
     partidas.registrar(c[0], c[1], 2, 0, rodada=1, torneio_id=t["id"])
     resultado = torneios.avancar()
-    passou = resultado == 0 and torneios.get_campeao() == c[0]
+    ativo = torneios.get_ativo()
+    passou = resultado == 0 and ativo["campeao"] == c[0]
     registrar("avancar: define campeão quando resta 1 time classificado", passou,
-              str(torneios.get_campeao()))
+              str(ativo["campeao"] if ativo else None))
 
 
 def teste_avancar_proxima_rodada():
     resetar_estado()
     t = torneios.criar("Semi", ["A", "B", "C", "D"])
-    for c in torneios.get_confrontos():
+    ativo = torneios.get_ativo()
+    for c in ativo["confrontos"]:
         partidas.registrar(c[0], c[1], 2, 0, rodada=1, torneio_id=t["id"])
     resultado = torneios.avancar()
+    ativo = torneios.get_ativo()
     passou = (
         resultado == 0
-        and torneios.get_rodada() == 2
-        and len(torneios.get_confrontos()) == 1
+        and ativo["rodada"] == 2
+        and len(ativo["confrontos"]) == 1
     )
     registrar("avancar: com 4 times avança para rodada 2 com 1 confronto", passou,
-              str(torneios.get_rodada()))
+              str(ativo["rodada"] if ativo else None))
 
 
 # --- resetar ---
@@ -326,14 +345,14 @@ def executar_testes():
         teste_set_ativo_torneio_existente,
         teste_set_ativo_torneio_inexistente,
         teste_desativar_remove_ativo,
-        teste_get_confrontos_retorna_lista_do_ativo,
-        teste_get_confrontos_sem_ativo_retorna_vazio,
-        teste_get_rodada_retorna_rodada_atual,
-        teste_get_rodada_sem_ativo_retorna_zero,
-        teste_get_campeao_sem_campeao_retorna_none,
+        teste_get_ativo_confrontos_retorna_lista_do_ativo,
+        teste_get_ativo_none_confrontos_vazio,
+        teste_get_ativo_rodada_retorna_rodada_atual,
+        teste_get_ativo_none_rodada_zero,
+        teste_get_ativo_campeao_sem_campeao_retorna_none,
         teste_confrontos_pendentes_sem_resultados,
-        teste_rodada_completa_falso_sem_resultados,
-        teste_rodada_completa_verdadeiro_apos_registrar,
+        teste_confrontos_pendentes_falso_sem_resultados,
+        teste_confrontos_pendentes_vazio_apos_registrar,
         teste_resetar_ativo_reinicia_torneio,
         teste_resetar_ativo_sem_ativo_retorna_um,
         teste_avancar_sem_torneio_ativo_retorna_um,
@@ -344,9 +363,9 @@ def executar_testes():
         teste_salvar_retorna_zero,
         teste_get_ativo_retorna_dict_quando_ativo,
         teste_get_ativo_retorna_none_sem_ativo,
-        teste_eh_confronto_ativo_verdadeiro,
-        teste_eh_confronto_ativo_falso,
-        teste_eh_confronto_ativo_sem_torneio,
+        teste_contexto_partida_par_valido_retorna_dados,
+        teste_contexto_partida_par_invalido_retorna_none,
+        teste_contexto_partida_sem_torneio_retorna_none,
         teste_contexto_partida_confronto_ativo,
         teste_contexto_partida_sem_confronto,
         teste_contexto_partida_sem_torneio,
