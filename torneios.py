@@ -5,8 +5,7 @@ import partidas
 
 __all__ = [
     "inicializar", "criar", "listar", "get_ativo", "set_ativo", "desativar",
-    "get_confrontos", "get_rodada", "get_campeao", "eh_confronto_ativo",
-    "confrontos_pendentes", "rodada_completa", "avancar", "resetar_ativo", "resetar", "salvar",
+    "confrontos_pendentes", "avancar", "resetar_ativo", "resetar", "salvar",
     "contexto_partida",
 ]
 
@@ -298,32 +297,7 @@ def set_ativo(torneio_id: str) -> int:
     return 0
 
 
-def get_confrontos() -> list:
-    """Retorna os confrontos da rodada atual do torneio ativo.
-
-    Requisito:
-        Fornecer a lista de duelos da rodada corrente para exibição e registro.
-
-    Retorno:
-        list: Lista de tuplas (time1, time2); [] se não houver torneio ativo.
-
-    Pré-condições:
-        - nenhuma.
-
-    Pós-condições:
-        - O torneio ativo permanece inalterado.
-
-    Restrições:
-        Pública — exposta via __all__.
-
-    Interface:
-        nenhuma
-    """
-    t = get_ativo()
-    return list(t["confrontos"]) if t else []
-
-
-def eh_confronto_ativo(time1: str, time2: str) -> bool:
+def _eh_confronto_ativo(time1: str, time2: str) -> bool:
     """Verifica se dois times formam um confronto da rodada atual do torneio ativo.
 
     Requisito:
@@ -343,66 +317,16 @@ def eh_confronto_ativo(time1: str, time2: str) -> bool:
         - O torneio ativo permanece inalterado.
 
     Restrições:
-        Pública — exposta via __all__.
+        Interna — não exposta via __all__.
 
     Interface:
         nenhuma
     """
+    t = get_ativo()
     return any(
         (c[0] == time1 and c[1] == time2) or (c[1] == time1 and c[0] == time2)
-        for c in get_confrontos()
+        for c in (t["confrontos"] if t else [])
     )
-
-
-def get_rodada() -> int:
-    """Retorna o número da rodada atual do torneio ativo.
-
-    Requisito:
-        Fornecer o número da rodada corrente para registro e exibição de partidas.
-
-    Retorno:
-        int: Número da rodada atual; 0 se não houver torneio ativo.
-
-    Pré-condições:
-        - nenhuma.
-
-    Pós-condições:
-        - O torneio ativo permanece inalterado.
-
-    Restrições:
-        Pública — exposta via __all__.
-
-    Interface:
-        nenhuma
-    """
-    t = get_ativo()
-    return t["rodada"] if t else 0
-
-
-def get_campeao() -> str | None:
-    """Retorna o campeão do torneio ativo se o torneio estiver encerrado.
-
-    Requisito:
-        Permitir consulta do resultado final após conclusão do torneio.
-
-    Retorno:
-        str: Nome do time campeão.
-        None: Se o torneio não estiver encerrado ou não houver torneio ativo.
-
-    Pré-condições:
-        - nenhuma.
-
-    Pós-condições:
-        - O torneio ativo permanece inalterado.
-
-    Restrições:
-        Pública — exposta via __all__.
-
-    Interface:
-        nenhuma
-    """
-    t = get_ativo()
-    return t["campeao"] if t else None
 
 
 def confrontos_pendentes() -> list:
@@ -442,34 +366,6 @@ def confrontos_pendentes() -> list:
         if not tem:
             pendentes.append(c)
     return pendentes
-
-
-def rodada_completa() -> bool:
-    """Verifica se todos os confrontos da rodada atual têm resultado registrado.
-
-    Requisito:
-        Controlar o fluxo do torneio impedindo avanço antes de todos os
-        resultados serem registrados.
-
-    Retorno:
-        bool: True se a rodada está completa (sem pendências); False caso contrário.
-
-    Pré-condições:
-        - nenhuma.
-
-    Pós-condições:
-        - O torneio ativo e partidas permanecem inalterados.
-
-    Restrições:
-        Pública — exposta via __all__.
-
-    Interface:
-        nenhuma
-    """
-    t = get_ativo()
-    if not t:
-        return False
-    return len(t["confrontos"]) > 0 and len(confrontos_pendentes()) == 0
 
 
 def avancar() -> int:
@@ -600,7 +496,7 @@ def contexto_partida(time1: str, time2: str) -> tuple:
         nenhuma
     """
     t = get_ativo()
-    if t and eh_confronto_ativo(time1, time2):
+    if t and _eh_confronto_ativo(time1, time2):
         return t["id"], t["rodada"]
     return None, None
 

@@ -59,7 +59,7 @@ def pagina_partidas():
 
     torneio_ativo = torneios.get_ativo()
     torneio_ativo_id = torneio_ativo["id"] if torneio_ativo else None
-    numero_rodada = torneios.get_rodada()
+    numero_rodada = torneio_ativo["rodada"] if torneio_ativo else 0
 
     torneio_id_historico = filtro_torneio or None
 
@@ -74,7 +74,7 @@ def pagina_partidas():
         filtro_torneio=filtro_torneio,
         msg=msg,
         tipo=tipo,
-        confrontos_atuais=torneios.get_confrontos(),
+        confrontos_atuais=torneio_ativo["confrontos"] if torneio_ativo else [],
         confrontos_pendentes=torneios.confrontos_pendentes(),
         partidas_rodada_atual=partidas.por_rodada(numero_rodada, torneio_id=torneio_ativo_id),
         numero_rodada=numero_rodada,
@@ -108,21 +108,22 @@ def pagina_torneio():
     msg = request.args.get("msg", "")
     tipo = request.args.get("tipo", "")
     torneio_ativo = torneios.get_ativo()
+    numero_rodada = torneio_ativo["rodada"] if torneio_ativo else 0
     return render_template(
         "torneio.html",
         times=todos_times,
         torneio_ativo=torneio_ativo,
         todos_torneios=torneios.listar(),
-        confrontos=torneios.get_confrontos(),
+        confrontos=torneio_ativo["confrontos"] if torneio_ativo else [],
         resultados=partidas.por_rodada(
-            torneios.get_rodada(),
+            numero_rodada,
             torneio_id=torneio_ativo["id"] if torneio_ativo else None
         ),
-        campeao=torneios.get_campeao(),
+        campeao=torneio_ativo["campeao"] if torneio_ativo else None,
         msg=msg,
         tipo=tipo,
-        numero_rodada=torneios.get_rodada(),
-        rodada_completa=torneios.rodada_completa(),
+        numero_rodada=numero_rodada,
+        rodada_completa=not torneios.confrontos_pendentes(),
     )
 
 
@@ -145,7 +146,7 @@ def ativar_torneio(torneio_id):
 
 @app.route("/torneio/avancar", methods=["POST"])
 def avancar_fase():
-    if not torneios.rodada_completa():
+    if torneios.confrontos_pendentes():
         return redirect(url_for("pagina_torneio",
             msg="Registre os resultados de todas as partidas na página de Partidas antes de avançar.", tipo="erro"))
     torneios.avancar()
