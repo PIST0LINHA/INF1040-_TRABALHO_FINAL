@@ -63,14 +63,17 @@ def _carregar() -> int:
     return 0
 
 
-def inicializar() -> int:
+def inicializar() -> dict:
     """Carrega os dados persistidos de partidas do arquivo para a memória.
 
     Requisito:
         Permitir que o módulo de partidas esteja pronto para uso ao iniciar a aplicação.
 
     Retorno:
-        int: 0 se os dados foram carregados com sucesso, 1 se o arquivo não existir.
+        dict: {status: 0, mensagem: "Dados de partidas carregados com sucesso.", dados: None}
+              se os dados foram carregados com sucesso.
+              {status: 1, mensagem: "Arquivo de partidas não encontrado...", dados: None}
+              se o arquivo não existir (estado iniciado vazio).
 
     Pré-condições:
         - Deve ser chamada antes de qualquer outra função do módulo.
@@ -84,10 +87,12 @@ def inicializar() -> int:
     Interface:
         nenhuma
     """
-    return _carregar()
+    if _carregar() == 0:
+        return {"status": 0, "mensagem": "Dados de partidas carregados com sucesso.", "dados": None}
+    return {"status": 1, "mensagem": "Arquivo de partidas não encontrado. Estado iniciado vazio.", "dados": None}
 
 
-def registrar(time1: str, time2: str, gols1: int, gols2: int, rodada=None, torneio_id=None) -> dict | str:
+def registrar(time1: str, time2: str, gols1: int, gols2: int, rodada=None, torneio_id=None) -> dict:
     """Valida e registra o resultado de uma partida na lista interna.
 
     Requisito:
@@ -103,16 +108,19 @@ def registrar(time1: str, time2: str, gols1: int, gols2: int, rodada=None, torne
         torneio_id (str, opcional): ID do torneio. Padrão: None.
 
     Retorno:
-        dict: {time1, time2, gols_time1, gols_time2[, rodada][, torneio_id]} em caso de sucesso.
-        str: Mensagem de erro se validação falhar ou partida já registrada.
+        dict: {status: 0, mensagem: "Partida registrada com sucesso.",
+               dados: {time1, time2, gols_time1, gols_time2[, rodada][, torneio_id]}}
+              em caso de sucesso.
+              {status: 1, mensagem: "Erro: ...", dados: None}
+              se validação falhar ou partida já registrada na rodada.
 
     Pré-condições:
         - time1 e time2 são strings não vazias e distintas.
         - gols1 e gols2 são inteiros >= 0.
 
     Pós-condições:
-        - Em caso de sucesso, a partida é adicionada a _lista.
-        - Em caso de erro, _lista permanece inalterada.
+        - Em caso de sucesso (status 0), a partida é adicionada a _lista.
+        - Em caso de erro (status 1), _lista permanece inalterada.
 
     Restrições:
         Pública — exposta via __all__.
@@ -121,25 +129,25 @@ def registrar(time1: str, time2: str, gols1: int, gols2: int, rodada=None, torne
         nenhuma
     """
     if not time1 or not time2:
-        return "Erro: nomes dos times não podem ser vazios."
+        return {"status": 1, "mensagem": "Erro: nomes dos times não podem ser vazios.", "dados": None}
     if time1 == time2:
-        return "Erro: um time não pode disputar contra si mesmo."
+        return {"status": 1, "mensagem": "Erro: um time não pode disputar contra si mesmo.", "dados": None}
     if rodada is not None:
         for p in _lista:
             if p.get("rodada") == rodada and p.get("torneio_id") == torneio_id:
                 if (p["time1"] == time1 and p["time2"] == time2) or \
                    (p["time1"] == time2 and p["time2"] == time1):
-                    return f"Partida {time1} × {time2} já foi registrada nesta rodada."
+                    return {"status": 1, "mensagem": f"Partida {time1} × {time2} já foi registrada nesta rodada.", "dados": None}
     nova = {"time1": time1, "time2": time2, "gols_time1": gols1, "gols_time2": gols2}
     if rodada is not None:
         nova["rodada"] = rodada
     if torneio_id is not None:
         nova["torneio_id"] = torneio_id
     _lista.append(nova)
-    return nova
+    return {"status": 0, "mensagem": "Partida registrada com sucesso.", "dados": nova}
 
 
-def listar(filtro_time=None, filtro_rodada=None, torneio_id=None) -> list:
+def listar(filtro_time=None, filtro_rodada=None, torneio_id=None) -> dict:
     """Retorna as partidas registradas, com filtros opcionais.
 
     Requisito:
@@ -151,7 +159,9 @@ def listar(filtro_time=None, filtro_rodada=None, torneio_id=None) -> list:
         torneio_id (str, opcional): ID do torneio. Padrão: None (sem filtro).
 
     Retorno:
-        list: Lista de dicts com as partidas que atendem aos filtros; [] se nenhuma.
+        dict: {status: 0, mensagem: "N partida(s) encontrada(s).",
+               dados: [lista de dicts com as partidas que atendem aos filtros]}
+              Dados é sempre uma lista; [] se nenhuma partida atender aos filtros.
 
     Pré-condições:
         - Filtros, quando fornecidos, são valores comparáveis aos armazenados.
@@ -179,10 +189,10 @@ def listar(filtro_time=None, filtro_rodada=None, torneio_id=None) -> list:
             p for p in resultado
             if str(p.get("rodada", "")) == str(filtro_rodada)
         ]
-    return resultado
+    return {"status": 0, "mensagem": f"{len(resultado)} partida(s) encontrada(s).", "dados": resultado}
 
 
-def por_rodada(rodada, torneio_id=None) -> list:
+def por_rodada(rodada, torneio_id=None) -> dict:
     """Retorna todas as partidas de uma rodada específica.
 
     Requisito:
@@ -193,7 +203,9 @@ def por_rodada(rodada, torneio_id=None) -> list:
         torneio_id (str, opcional): ID do torneio para filtrar. Padrão: None.
 
     Retorno:
-        list: Lista de dicts com as partidas da rodada; [] se não houver nenhuma.
+        dict: {status: 0, mensagem: "N partida(s) na rodada X.",
+               dados: [lista de dicts com as partidas da rodada]}
+              Dados é sempre uma lista; [] se não houver partidas nessa rodada.
 
     Pré-condições:
         - rodada é um valor compatível com o campo "rodada" das partidas.
@@ -210,10 +222,10 @@ def por_rodada(rodada, torneio_id=None) -> list:
     resultado = [p for p in _lista if p.get("rodada") == rodada]
     if torneio_id is not None:
         resultado = [p for p in resultado if p.get("torneio_id") == torneio_id]
-    return resultado
+    return {"status": 0, "mensagem": f"{len(resultado)} partida(s) na rodada {rodada}.", "dados": resultado}
 
 
-def rodadas(torneio_id=None) -> list:
+def rodadas(torneio_id=None) -> dict:
     """Retorna lista ordenada das rodadas que possuem ao menos uma partida registrada.
 
     Requisito:
@@ -223,7 +235,9 @@ def rodadas(torneio_id=None) -> list:
         torneio_id (str, opcional): ID do torneio para filtrar. Padrão: None.
 
     Retorno:
-        list: Lista de strings com os números de rodada em ordem crescente; [] se vazia.
+        dict: {status: 0, mensagem: "N rodada(s) encontrada(s).",
+               dados: [lista de strings com os números de rodada em ordem crescente]}
+              Dados é sempre uma lista; [] se não houver rodadas.
 
     Pré-condições:
         - nenhuma.
@@ -238,10 +252,11 @@ def rodadas(torneio_id=None) -> list:
         nenhuma
     """
     fonte = _lista if torneio_id is None else [p for p in _lista if p.get("torneio_id") == torneio_id]
-    return sorted({str(p.get("rodada")) for p in fonte if p.get("rodada")})
+    resultado = sorted({str(p.get("rodada")) for p in fonte if p.get("rodada")})
+    return {"status": 0, "mensagem": f"{len(resultado)} rodada(s) encontrada(s).", "dados": resultado}
 
 
-def resetar(torneio_id=None) -> int:
+def resetar(torneio_id=None) -> dict:
     """Remove partidas da memória, total ou parcialmente por torneio.
 
     Requisito:
@@ -252,7 +267,7 @@ def resetar(torneio_id=None) -> int:
                                     Se None, remove todas as partidas. Padrão: None.
 
     Retorno:
-        int: 0 em caso de sucesso.
+        dict: {status: 0, mensagem: "Partidas removidas com sucesso.", dados: None}
 
     Pré-condições:
         - nenhuma.
@@ -272,17 +287,18 @@ def resetar(torneio_id=None) -> int:
         _lista = [p for p in _lista if p.get("torneio_id") != torneio_id]
     else:
         _lista.clear()
-    return 0
+    return {"status": 0, "mensagem": "Partidas removidas com sucesso.", "dados": None}
 
 
-def salvar() -> int:
+def salvar() -> dict:
     """Persiste o estado atual das partidas no arquivo de dados.
 
     Requisito:
         Garantir durabilidade dos resultados de partidas entre sessões.
 
     Retorno:
-        int: 0 em caso de sucesso; erros de I/O propagam exceção.
+        dict: {status: 0, mensagem: "Partidas salvas com sucesso.", dados: None}
+              Erros de I/O propagam exceção.
 
     Pré-condições:
         - _ARQUIVO aponta para um caminho gravável.
@@ -296,4 +312,5 @@ def salvar() -> int:
     Interface:
         nenhuma
     """
-    return _salvar()
+    _salvar()
+    return {"status": 0, "mensagem": "Partidas salvas com sucesso.", "dados": None}

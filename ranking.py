@@ -60,7 +60,6 @@ def _carregar() -> int:
         return 1
     with open(_ARQUIVO, "r", encoding="utf-8") as f:
         dados = json.load(f)
-    # compatibilidade com formato antigo (lista plana)
     if isinstance(dados, list):
         _tabelas = {"default": dados}
     else:
@@ -68,14 +67,17 @@ def _carregar() -> int:
     return 0
 
 
-def inicializar() -> int:
+def inicializar() -> dict:
     """Carrega os dados persistidos de rankings do arquivo para a memória.
 
     Requisito:
         Permitir que o módulo de ranking esteja pronto para uso ao iniciar a aplicação.
 
     Retorno:
-        int: 0 se os dados foram carregados com sucesso, 1 se o arquivo não existir.
+        dict: {status: 0, mensagem: "Dados de ranking carregados com sucesso.", dados: None}
+              se os dados foram carregados com sucesso.
+              {status: 1, mensagem: "Arquivo de ranking não encontrado...", dados: None}
+              se o arquivo não existir (estado iniciado vazio).
 
     Pré-condições:
         - Deve ser chamada antes de qualquer outra função do módulo.
@@ -89,10 +91,12 @@ def inicializar() -> int:
     Interface:
         nenhuma
     """
-    return _carregar()
+    if _carregar() == 0:
+        return {"status": 0, "mensagem": "Dados de ranking carregados com sucesso.", "dados": None}
+    return {"status": 1, "mensagem": "Arquivo de ranking não encontrado. Estado iniciado vazio.", "dados": None}
 
 
-def criar_tabela(lista_times: list, torneio_id: str = "default") -> int:
+def criar_tabela(lista_times: list, torneio_id: str = "default") -> dict:
     """Inicializa a tabela de classificação de um torneio com contadores zerados.
 
     Requisito:
@@ -104,14 +108,19 @@ def criar_tabela(lista_times: list, torneio_id: str = "default") -> int:
         torneio_id (str, opcional): Identificador do torneio. Padrão: "default".
 
     Retorno:
-        int: 0 em caso de sucesso.
+        dict: {status: 0, mensagem: "Tabela criada com N time(s).", dados: None}
+              em caso de sucesso.
+              {status: 1, mensagem: "Erro: ...", dados: None}
+              se torneio_id for vazio ou lista_times não for uma lista.
 
     Pré-condições:
         - lista_times é uma lista de strings (pode ser vazia).
         - torneio_id é uma string não vazia.
 
     Pós-condições:
-        - _tabelas[torneio_id] contém uma entrada por time com todos os contadores = 0.
+        - Em caso de sucesso (status 0), _tabelas[torneio_id] contém uma entrada
+          por time com todos os contadores zerados.
+        - Em caso de erro (status 1), _tabelas permanece inalterado.
 
     Restrições:
         Pública — exposta via __all__.
@@ -119,6 +128,8 @@ def criar_tabela(lista_times: list, torneio_id: str = "default") -> int:
     Interface:
         nenhuma
     """
+    if not torneio_id or not isinstance(lista_times, list):
+        return {"status": 1, "mensagem": "Erro: torneio_id não pode ser vazio e lista_times deve ser uma lista.", "dados": None}
     _tabelas[torneio_id] = [
         {
             "time": time,
@@ -133,10 +144,10 @@ def criar_tabela(lista_times: list, torneio_id: str = "default") -> int:
         }
         for time in lista_times
     ]
-    return 0
+    return {"status": 0, "mensagem": f"Tabela criada com {len(lista_times)} time(s).", "dados": None}
 
 
-def atualizar_pontos(resultado: dict, torneio_id: str = "default") -> int:
+def atualizar_pontos(resultado: dict, torneio_id: str = "default") -> dict:
     """Atualiza a tabela de classificação de um torneio com o resultado de uma partida.
 
     Vitória vale 3 pontos; empate vale 1 ponto; derrota vale 0 pontos.
@@ -150,16 +161,20 @@ def atualizar_pontos(resultado: dict, torneio_id: str = "default") -> int:
         torneio_id (str, opcional): Identificador do torneio. Padrão: "default".
 
     Retorno:
-        int: 0 se ambos os times foram encontrados e atualizados.
-             1 se a tabela do torneio não existir ou algum time não for encontrado.
+        dict: {status: 0, mensagem: "Pontuação atualizada com sucesso.", dados: None}
+              se ambos os times foram encontrados e atualizados.
+              {status: 1, mensagem: "Erro: ...", dados: None}
+              se a tabela do torneio não existir ou algum time não for encontrado.
 
     Pré-condições:
         - resultado contém as chaves time1, time2, gols_time1, gols_time2.
         - criar_tabela foi chamada com torneio_id antes desta função.
 
     Pós-condições:
-        - Os registros de time1 e time2 em _tabelas[torneio_id] têm pontos,
-          jogos, vitórias, empates, derrotas e saldo de gols atualizados.
+        - Em caso de sucesso (status 0), os registros de time1 e time2 em
+          _tabelas[torneio_id] têm pontos, jogos, vitórias, empates, derrotas
+          e saldo de gols atualizados.
+        - Em caso de erro (status 1), _tabelas permanece inalterado.
 
     Restrições:
         Pública — exposta via __all__.
@@ -169,7 +184,7 @@ def atualizar_pontos(resultado: dict, torneio_id: str = "default") -> int:
     """
     tabela = _tabelas.get(torneio_id)
     if tabela is None:
-        return 1
+        return {"status": 1, "mensagem": f"Erro: tabela do torneio '{torneio_id}' não encontrada.", "dados": None}
 
     gols_casa = resultado["gols_time1"]
     gols_fora = resultado["gols_time2"]
@@ -206,10 +221,12 @@ def atualizar_pontos(resultado: dict, torneio_id: str = "default") -> int:
             else:
                 time["derrotas"] += 1
 
-    return 0 if (encontrado1 and encontrado2) else 1
+    if encontrado1 and encontrado2:
+        return {"status": 0, "mensagem": "Pontuação atualizada com sucesso.", "dados": None}
+    return {"status": 1, "mensagem": "Erro: um ou mais times não foram encontrados na tabela.", "dados": None}
 
 
-def ordenar_classificacao(torneio_id: str = "default") -> list:
+def ordenar_classificacao(torneio_id: str = "default") -> dict:
     """Retorna a classificação de um torneio ordenada sem modificar a tabela original.
 
     Critérios de ordenação: pontos → vitórias → saldo de gols → gols marcados.
@@ -221,11 +238,14 @@ def ordenar_classificacao(torneio_id: str = "default") -> list:
         torneio_id (str, opcional): Identificador do torneio. Padrão: "default".
 
     Retorno:
-        list: Lista de dicts ordenada do primeiro ao último colocado;
-              [] se o torneio não existir.
+        dict: {status: 0, mensagem: "Classificação com N time(s).",
+               dados: [lista de dicts ordenada do primeiro ao último colocado]}
+              Dados é [] se o torneio existir mas não tiver times cadastrados.
+              {status: 1, mensagem: "Erro: torneio '...' não encontrado.", dados: None}
+              se o torneio_id não existir em _tabelas.
 
     Pré-condições:
-        - nenhuma (retorna [] se torneio_id não existir em _tabelas).
+        - nenhuma.
 
     Pós-condições:
         - _tabelas permanece inalterado (operação de leitura com cópia ordenada).
@@ -236,22 +256,26 @@ def ordenar_classificacao(torneio_id: str = "default") -> list:
     Interface:
         nenhuma
     """
-    tabela = _tabelas.get(torneio_id, [])
-    return sorted(
+    if torneio_id not in _tabelas:
+        return {"status": 1, "mensagem": f"Erro: torneio '{torneio_id}' não encontrado.", "dados": None}
+    tabela = _tabelas[torneio_id]
+    ordenada = sorted(
         tabela,
         key=lambda t: (t["pontos"], t["vitorias"], t["saldo_gols"], t["gols_marcados"]),
         reverse=True,
     )
+    return {"status": 0, "mensagem": f"Classificação com {len(ordenada)} time(s).", "dados": ordenada}
 
 
-def salvar() -> int:
+def salvar() -> dict:
     """Persiste o estado atual de todos os rankings no arquivo de dados.
 
     Requisito:
         Garantir durabilidade dos dados de classificação entre sessões.
 
     Retorno:
-        int: 0 em caso de sucesso; erros de I/O propagam exceção.
+        dict: {status: 0, mensagem: "Rankings salvos com sucesso.", dados: None}
+              Erros de I/O propagam exceção.
 
     Pré-condições:
         - _ARQUIVO aponta para um caminho gravável.
@@ -265,4 +289,5 @@ def salvar() -> int:
     Interface:
         nenhuma
     """
-    return _salvar()
+    _salvar()
+    return {"status": 0, "mensagem": "Rankings salvos com sucesso.", "dados": None}

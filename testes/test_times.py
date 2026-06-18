@@ -9,7 +9,7 @@ def registrar(nome_teste, passou, detalhe=""):
 
 
 def limpar_times():
-    for t in times.listar_times():
+    for t in times.listar_times()["dados"]:
         times.remover_time(t["id"])
 
 
@@ -17,35 +17,35 @@ def limpar_times():
 
 def teste_criar_time_valido():
     limpar_times()
-    resultado = times.criar_time("Flamengo", ["Jogador1", "Jogador2"])
+    r = times.criar_time("Flamengo", ["Jogador1", "Jogador2"])
     passou = (
-        isinstance(resultado, dict)
-        and "id" in resultado
-        and resultado["nome"] == "Flamengo"
-        and resultado["jogadores"] == ["Jogador1", "Jogador2"]
+        r["status"] == 0
+        and r["dados"]["nome"] == "Flamengo"
+        and r["dados"]["jogadores"] == ["Jogador1", "Jogador2"]
+        and "id" in r["dados"]
     )
-    registrar("criar_time: nome e jogadores válidos", passou, str(resultado))
+    registrar("criar_time: nome e jogadores válidos retorna status 0 e dados corretos", passou, str(r))
 
 
 def teste_criar_time_jogadores_vazios():
     limpar_times()
-    resultado = times.criar_time("Vasco", [])
-    passou = isinstance(resultado, dict) and resultado["jogadores"] == []
-    registrar("criar_time: lista de jogadores vazia", passou, str(resultado))
+    r = times.criar_time("Vasco", [])
+    passou = r["status"] == 0 and r["dados"]["jogadores"] == []
+    registrar("criar_time: lista de jogadores vazia retorna status 0", passou, str(r))
 
 
 def teste_criar_time_nome_vazio():
-    resultado = times.criar_time("", [])
-    passou = isinstance(resultado, str) and resultado.startswith("Erro")
-    registrar("criar_time: nome vazio retorna mensagem de erro", passou, str(resultado))
+    r = times.criar_time("", [])
+    passou = r["status"] == 1 and "Erro" in r["mensagem"]
+    registrar("criar_time: nome vazio retorna status 1 com mensagem de erro", passou, str(r))
 
 
 def teste_criar_time_nome_duplicado():
     limpar_times()
     times.criar_time("Botafogo", [])
-    resultado = times.criar_time("Botafogo", [])
-    passou = isinstance(resultado, str) and "Botafogo" in resultado
-    registrar("criar_time: nome duplicado retorna mensagem de erro", passou, str(resultado))
+    r = times.criar_time("Botafogo", [])
+    passou = r["status"] == 1 and "Botafogo" in r["mensagem"]
+    registrar("criar_time: nome duplicado retorna status 1 com mensagem de erro", passou, str(r))
 
 
 # --- buscar_time ---
@@ -53,21 +53,21 @@ def teste_criar_time_nome_duplicado():
 def teste_buscar_time_existente():
     limpar_times()
     criado = times.criar_time("Botafogo", ["Ana"])
-    resultado = times.buscar_time(criado["id"])
-    passou = isinstance(resultado, dict) and resultado["id"] == criado["id"]
-    registrar("buscar_time: ID existente", passou, str(resultado))
+    r = times.buscar_time(criado["dados"]["id"])
+    passou = r["status"] == 0 and r["dados"]["id"] == criado["dados"]["id"]
+    registrar("buscar_time: ID existente retorna status 0 e dados do time", passou, str(r))
 
 
 def teste_buscar_time_inexistente():
-    resultado = times.buscar_time("zzzzzz")
-    passou = isinstance(resultado, str) and "não encontrado" in resultado and "zzzzzz" in resultado
-    registrar("buscar_time: ID inexistente", passou, str(resultado))
+    r = times.buscar_time("zzzzzz")
+    passou = r["status"] == 1 and "não encontrado" in r["mensagem"] and "zzzzzz" in r["mensagem"]
+    registrar("buscar_time: ID inexistente retorna status 1 com mensagem de erro", passou, str(r))
 
 
 def teste_buscar_time_id_vazio():
-    resultado = times.buscar_time("")
-    passou = resultado == "Erro: ID não pode ser vazio."
-    registrar("buscar_time: ID vazio", passou, str(resultado))
+    r = times.buscar_time("")
+    passou = r["status"] == 1 and "ID não pode ser vazio" in r["mensagem"]
+    registrar("buscar_time: ID vazio retorna status 1 com mensagem de erro", passou, str(r))
 
 
 # --- listar_times ---
@@ -76,16 +76,16 @@ def teste_listar_times_com_times():
     limpar_times()
     times.criar_time("Palmeiras", [])
     times.criar_time("Santos", [])
-    resultado = times.listar_times()
-    passou = isinstance(resultado, list) and len(resultado) == 2
-    registrar("listar_times: com times cadastrados", passou, str(resultado))
+    r = times.listar_times()
+    passou = r["status"] == 0 and isinstance(r["dados"], list) and len(r["dados"]) == 2
+    registrar("listar_times: com times cadastrados retorna status 0 e lista com 2 times", passou, str(r))
 
 
 def teste_listar_times_vazio():
     limpar_times()
-    resultado = times.listar_times()
-    passou = resultado == []
-    registrar("listar_times: sem times cadastrados", passou, str(resultado))
+    r = times.listar_times()
+    passou = r["status"] == 0 and r["dados"] == []
+    registrar("listar_times: sem times cadastrados retorna status 0 e lista vazia", passou, str(r))
 
 
 # --- remover_time ---
@@ -93,26 +93,22 @@ def teste_listar_times_vazio():
 def teste_remover_time_existente():
     limpar_times()
     criado = times.criar_time("Corinthians", [])
-    resultado = times.remover_time(criado["id"])
-    ainda_existe = any(t["id"] == criado["id"] for t in times.listar_times())
-    passou = (
-        isinstance(resultado, str)
-        and "removido com sucesso" in resultado
-        and not ainda_existe
-    )
-    registrar("remover_time: ID existente", passou, str(resultado))
+    r = times.remover_time(criado["dados"]["id"])
+    ainda_existe = any(t["id"] == criado["dados"]["id"] for t in times.listar_times()["dados"])
+    passou = r["status"] == 0 and r["dados"]["nome"] == "Corinthians" and not ainda_existe
+    registrar("remover_time: ID existente retorna status 0 e dados do time removido", passou, str(r))
 
 
 def teste_remover_time_inexistente():
-    resultado = times.remover_time("zzzzzz")
-    passou = isinstance(resultado, str) and "não encontrado" in resultado and "zzzzzz" in resultado
-    registrar("remover_time: ID inexistente", passou, str(resultado))
+    r = times.remover_time("zzzzzz")
+    passou = r["status"] == 1 and "não encontrado" in r["mensagem"] and "zzzzzz" in r["mensagem"]
+    registrar("remover_time: ID inexistente retorna status 1 com mensagem de erro", passou, str(r))
 
 
 def teste_remover_time_id_vazio():
-    resultado = times.remover_time("")
-    passou = resultado == "Erro: ID não pode ser vazio."
-    registrar("remover_time: ID vazio", passou, str(resultado))
+    r = times.remover_time("")
+    passou = r["status"] == 1 and "ID não pode ser vazio" in r["mensagem"]
+    registrar("remover_time: ID vazio retorna status 1 com mensagem de erro", passou, str(r))
 
 
 # --- parsear_jogadores ---
@@ -137,18 +133,18 @@ def teste_parsear_jogadores_espacos_extras():
 
 # --- inicializar / salvar ---
 
-def teste_salvar_retorna_zero():
+def teste_salvar_retorna_status_zero():
     limpar_times()
     times.criar_time("Flamengo", [])
-    resultado = times.salvar()
-    passou = resultado == 0
-    registrar("salvar: persiste dados e retorna 0", passou, str(resultado))
+    r = times.salvar()
+    passou = r["status"] == 0
+    registrar("salvar: persiste dados e retorna status 0", passou, str(r))
 
 
-def teste_inicializar_retorna_inteiro():
-    resultado = times.inicializar()
-    passou = isinstance(resultado, int)
-    registrar("inicializar: retorna int (0 se arquivo existe, 1 se não existe)", passou, str(resultado))
+def teste_inicializar_retorna_dict():
+    r = times.inicializar()
+    passou = isinstance(r, dict) and "status" in r and "mensagem" in r and "dados" in r
+    registrar("inicializar: retorna dict com status, mensagem e dados", passou, str(r))
 
 
 # --- execução ---
@@ -170,8 +166,8 @@ def executar_testes():
         teste_parsear_jogadores_string_valida,
         teste_parsear_jogadores_string_vazia,
         teste_parsear_jogadores_espacos_extras,
-        teste_salvar_retorna_zero,
-        teste_inicializar_retorna_inteiro,
+        teste_salvar_retorna_status_zero,
+        teste_inicializar_retorna_dict,
     ]
 
     for teste in testes:

@@ -16,7 +16,7 @@ def resetar():
 
 def teste_criar_tabela_multiplos_times():
     ranking.criar_tabela(["Flamengo", "Vasco", "Fluminense"])
-    relacao = ranking.ordenar_classificacao()
+    relacao = ranking.ordenar_classificacao()["dados"]
     passou = (
         len(relacao) == 3
         and all(t["pontos"] == 0 for t in relacao)
@@ -31,16 +31,28 @@ def teste_criar_tabela_multiplos_times():
 
 def teste_criar_tabela_nome_preservado():
     ranking.criar_tabela(["Flamengo"])
-    relacao = ranking.ordenar_classificacao()
+    relacao = ranking.ordenar_classificacao()["dados"]
     passou = relacao[0]["time"] == "Flamengo"
     registrar("criar_tabela: nome do time preservado", passou, str(relacao))
 
 
 def teste_criar_tabela_lista_vazia():
     ranking.criar_tabela([])
-    relacao = ranking.ordenar_classificacao()
+    relacao = ranking.ordenar_classificacao()["dados"]
     passou = relacao == []
     registrar("criar_tabela: lista vazia não gera erro", passou, str(relacao))
+
+
+def teste_criar_tabela_torneio_id_vazio_retorna_status_um():
+    r = ranking.criar_tabela(["Flamengo"], torneio_id="")
+    passou = r["status"] == 1
+    registrar("criar_tabela: torneio_id vazio retorna status 1", passou, str(r))
+
+
+def teste_criar_tabela_retorna_status_zero():
+    r = ranking.criar_tabela(["Flamengo", "Vasco"])
+    passou = r["status"] == 0
+    registrar("criar_tabela: entrada válida retorna status 0", passou, str(r))
 
 
 # --- atualizar_pontos ---
@@ -49,7 +61,7 @@ def teste_atualizar_pontos_vitoria_time1():
     ranking.criar_tabela(["Flamengo", "Vasco"])
     ranking.atualizar_pontos({"time1": "Flamengo", "gols_time1": 2,
                                "time2": "Vasco",    "gols_time2": 0})
-    relacao  = ranking.ordenar_classificacao()
+    relacao  = ranking.ordenar_classificacao()["dados"]
     flamengo = next(t for t in relacao if t["time"] == "Flamengo")
     vasco    = next(t for t in relacao if t["time"] == "Vasco")
     passou = (
@@ -64,7 +76,7 @@ def teste_atualizar_pontos_vitoria_time_fora():
     ranking.criar_tabela(["Flamengo", "Vasco"])
     ranking.atualizar_pontos({"time1": "Flamengo", "gols_time1": 0,
                                "time2": "Vasco",    "gols_time2": 7})
-    relacao  = ranking.ordenar_classificacao()
+    relacao  = ranking.ordenar_classificacao()["dados"]
     flamengo = next(t for t in relacao if t["time"] == "Flamengo")
     vasco    = next(t for t in relacao if t["time"] == "Vasco")
     passou = (
@@ -79,7 +91,7 @@ def teste_atualizar_pontos_empate():
     ranking.criar_tabela(["Flamengo", "Vasco"])
     ranking.atualizar_pontos({"time1": "Flamengo", "gols_time1": 1,
                                "time2": "Vasco",    "gols_time2": 1})
-    relacao  = ranking.ordenar_classificacao()
+    relacao  = ranking.ordenar_classificacao()["dados"]
     flamengo = next(t for t in relacao if t["time"] == "Flamengo")
     vasco    = next(t for t in relacao if t["time"] == "Vasco")
     passou = (
@@ -94,7 +106,7 @@ def teste_atualizar_pontos_gols_contabilizados():
     ranking.criar_tabela(["Flamengo", "Vasco"])
     ranking.atualizar_pontos({"time1": "Flamengo", "gols_time1": 3,
                                "time2": "Vasco",    "gols_time2": 1})
-    relacao  = ranking.ordenar_classificacao()
+    relacao  = ranking.ordenar_classificacao()["dados"]
     flamengo = next(t for t in relacao if t["time"] == "Flamengo")
     vasco    = next(t for t in relacao if t["time"] == "Vasco")
     passou = (
@@ -111,7 +123,7 @@ def teste_atualizar_pontos_acumulativo():
                                "time2": "Vasco",    "gols_time2": 0})
     ranking.atualizar_pontos({"time1": "Flamengo", "gols_time1": 1,
                                "time2": "Vasco",    "gols_time2": 1})
-    relacao  = ranking.ordenar_classificacao()
+    relacao  = ranking.ordenar_classificacao()["dados"]
     flamengo = next(t for t in relacao if t["time"] == "Flamengo")
     passou = (
         flamengo["pontos"] == 4
@@ -133,7 +145,7 @@ def teste_ordenar_classificacao_por_pontos():
     ranking.atualizar_pontos({"time1": "Flamengo",   "gols_time1": 1, "time2": "Vasco",      "gols_time2": 0})
     ranking.atualizar_pontos({"time1": "Flamengo",   "gols_time1": 1, "time2": "Vasco",      "gols_time2": 0})
     ranking.atualizar_pontos({"time1": "Vasco",      "gols_time1": 1, "time2": "Flamengo",   "gols_time2": 0})
-    relacao = ranking.ordenar_classificacao()
+    relacao = ranking.ordenar_classificacao()["dados"]
     passou = (
         relacao[0]["time"] == "Fluminense"
         and relacao[1]["time"] == "Flamengo"
@@ -146,7 +158,7 @@ def teste_ordenar_classificacao_desempate_vitorias():
     ranking.criar_tabela(["Flamengo", "Vasco"])
     ranking.atualizar_pontos({"time1": "Flamengo", "gols_time1": 1,
                                "time2": "Vasco",    "gols_time2": 0})
-    relacao = ranking.ordenar_classificacao()
+    relacao = ranking.ordenar_classificacao()["dados"]
     passou = (
         relacao[0]["time"] == "Flamengo" and relacao[0]["vitorias"] == 1
         and relacao[1]["time"] == "Vasco" and relacao[1]["vitorias"] == 0
@@ -160,7 +172,7 @@ def teste_ordenar_classificacao_desempate_saldo_gols():
                                "time2": "Fluminense", "gols_time2": 1})
     ranking.atualizar_pontos({"time1": "Vasco",      "gols_time1": 2,
                                "time2": "Fluminense", "gols_time2": 1})
-    relacao  = ranking.ordenar_classificacao()
+    relacao  = ranking.ordenar_classificacao()["dados"]
     flamengo = next(t for t in relacao if t["time"] == "Flamengo")
     vasco    = next(t for t in relacao if t["time"] == "Vasco")
     passou = relacao.index(flamengo) < relacao.index(vasco)
@@ -171,47 +183,53 @@ def teste_ordenar_classificacao_tabela_original_nao_modificada():
     ranking.criar_tabela(["Flamengo", "Vasco"])
     ranking.atualizar_pontos({"time1": "Vasco",    "gols_time1": 3,
                                "time2": "Flamengo", "gols_time2": 0})
-    primeiro_antes = ranking.ordenar_classificacao()[0]["time"]
+    primeiro_antes = ranking.ordenar_classificacao()["dados"][0]["time"]
     ranking.ordenar_classificacao()
-    primeiro_depois = ranking.ordenar_classificacao()[0]["time"]
+    primeiro_depois = ranking.ordenar_classificacao()["dados"][0]["time"]
     passou = primeiro_depois == primeiro_antes
     registrar("ordenar_classificacao: tabela original não modificada", passou,
               f"antes={primeiro_antes} | depois={primeiro_depois}")
 
 
+def teste_ordenar_classificacao_torneio_inexistente_retorna_status_um():
+    r = ranking.ordenar_classificacao("torneio_que_nao_existe_xyz")
+    passou = r["status"] == 1 and r["dados"] is None
+    registrar("ordenar_classificacao: torneio inexistente retorna status 1 e dados None", passou, str(r))
+
+
 # --- inicializar / salvar ---
 
-def teste_inicializar_retorna_inteiro():
-    resultado = ranking.inicializar()
-    passou = isinstance(resultado, int)
-    registrar("inicializar: retorna int (0 se arquivo existe, 1 se não existe)", passou, str(resultado))
+def teste_inicializar_retorna_dict():
+    r = ranking.inicializar()
+    passou = isinstance(r, dict) and "status" in r and "mensagem" in r and "dados" in r
+    registrar("inicializar: retorna dict com status, mensagem e dados", passou, str(r))
+
+
+def teste_salvar_retorna_status_zero():
+    ranking.criar_tabela(["Flamengo", "Vasco"])
+    r = ranking.salvar()
+    passou = r["status"] == 0
+    registrar("salvar: persiste dados e retorna status 0", passou, str(r))
 
 
 # --- atualizar_pontos (cenários de falha) ---
 
-def teste_salvar_retorna_zero():
-    ranking.criar_tabela(["Flamengo", "Vasco"])
-    resultado = ranking.salvar()
-    passou = resultado == 0
-    registrar("salvar: persiste dados e retorna 0", passou, str(resultado))
-
-
 def teste_atualizar_pontos_torneio_inexistente():
-    resultado = ranking.atualizar_pontos(
+    r = ranking.atualizar_pontos(
         {"time1": "Flamengo", "gols_time1": 1, "time2": "Vasco", "gols_time2": 0},
         torneio_id="torneio_que_nao_existe"
     )
-    passou = resultado == 1
-    registrar("atualizar_pontos: torneio inexistente retorna 1", passou, str(resultado))
+    passou = r["status"] == 1
+    registrar("atualizar_pontos: torneio inexistente retorna status 1", passou, str(r))
 
 
 def teste_atualizar_pontos_time_nao_encontrado():
     ranking.criar_tabela(["Flamengo", "Vasco"])
-    resultado = ranking.atualizar_pontos(
+    r = ranking.atualizar_pontos(
         {"time1": "Palmeiras", "gols_time1": 1, "time2": "Santos", "gols_time2": 0}
     )
-    passou = resultado == 1
-    registrar("atualizar_pontos: times não encontrados na tabela retorna 1", passou, str(resultado))
+    passou = r["status"] == 1
+    registrar("atualizar_pontos: times não encontrados na tabela retorna status 1", passou, str(r))
 
 
 # --- execução ---
@@ -221,6 +239,8 @@ def executar_testes():
         teste_criar_tabela_multiplos_times,
         teste_criar_tabela_nome_preservado,
         teste_criar_tabela_lista_vazia,
+        teste_criar_tabela_torneio_id_vazio_retorna_status_um,
+        teste_criar_tabela_retorna_status_zero,
         teste_atualizar_pontos_vitoria_time1,
         teste_atualizar_pontos_vitoria_time_fora,
         teste_atualizar_pontos_empate,
@@ -230,8 +250,9 @@ def executar_testes():
         teste_ordenar_classificacao_desempate_vitorias,
         teste_ordenar_classificacao_desempate_saldo_gols,
         teste_ordenar_classificacao_tabela_original_nao_modificada,
-        teste_inicializar_retorna_inteiro,
-        teste_salvar_retorna_zero,
+        teste_ordenar_classificacao_torneio_inexistente_retorna_status_um,
+        teste_inicializar_retorna_dict,
+        teste_salvar_retorna_status_zero,
         teste_atualizar_pontos_torneio_inexistente,
         teste_atualizar_pontos_time_nao_encontrado,
     ]

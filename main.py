@@ -18,13 +18,14 @@ def index():
 
 @app.route("/times")
 def pagina_times():
-    todos_times = times.listar_times()
+    todos_times = times.listar_times()["dados"]
     msg = request.args.get("msg", "")
     tipo = request.args.get("tipo", "")
     busca_id = request.args.get("busca_id", "").strip()
     resultado_busca = None
     if busca_id:
-        resultado_busca = times.buscar_time(busca_id)
+        res = times.buscar_time(busca_id)
+        resultado_busca = res["dados"] if res["status"] == 0 else None
     return render_template("times.html", times=todos_times, msg=msg, tipo=tipo,
                            busca_id=busca_id, resultado_busca=resultado_busca)
 
@@ -35,48 +36,49 @@ def criar_time():
     jogadores_raw = request.form.get("jogadores", "").strip()
     jogadores = times.parsear_jogadores(jogadores_raw)
     resultado = times.criar_time(nome, jogadores)
-    if isinstance(resultado, dict):
-        return redirect(url_for("pagina_times", msg=f"Time '{resultado['nome']}' criado com sucesso.", tipo="sucesso"))
-    return redirect(url_for("pagina_times", msg=resultado, tipo="erro"))
+    if resultado["status"] == 0:
+        return redirect(url_for("pagina_times", msg=f"Time '{resultado['dados']['nome']}' criado com sucesso.", tipo="sucesso"))
+    return redirect(url_for("pagina_times", msg=resultado["mensagem"], tipo="erro"))
 
 
 @app.route("/times/remover/<identificador>")
 def remover_time(identificador):
     resultado = times.remover_time(identificador)
-    if resultado.startswith("Erro"):
-        return redirect(url_for("pagina_times", msg=resultado, tipo="erro"))
-    return redirect(url_for("pagina_times", msg=resultado, tipo="sucesso"))
+    if resultado["status"] == 1:
+        return redirect(url_for("pagina_times", msg=resultado["mensagem"], tipo="erro"))
+    return redirect(url_for("pagina_times", msg=f"Time '{resultado['dados']['nome']}' removido com sucesso.", tipo="sucesso"))
 
 
 @app.route("/partidas")
 def pagina_partidas():
-    todos_times = times.listar_times()
+    todos_times = times.listar_times()["dados"]
     msg = request.args.get("msg", "")
     tipo = request.args.get("tipo", "")
     filtro_time = request.args.get("filtro_time", "").strip()
     filtro_rodada = request.args.get("filtro_rodada", "").strip()
     filtro_torneio = request.args.get("filtro_torneio", "").strip()
 
-    torneio_ativo = torneios.get_ativo()
+    torneio_ativo = torneios.get_ativo()["dados"]
     torneio_ativo_id = torneio_ativo["id"] if torneio_ativo else None
     numero_rodada = torneio_ativo["rodada"] if torneio_ativo else 0
 
     torneio_id_historico = filtro_torneio or None
+    pendentes = torneios.confrontos_pendentes()["dados"] or []
 
     return render_template(
         "partidas.html",
-        partidas=partidas.listar(filtro_time or None, filtro_rodada or None, torneio_id=torneio_id_historico),
+        partidas=partidas.listar(filtro_time or None, filtro_rodada or None, torneio_id=torneio_id_historico)["dados"],
         todos_times=todos_times,
-        todos_torneios=torneios.listar(),
-        rodadas=partidas.rodadas(torneio_id=torneio_id_historico),
+        todos_torneios=torneios.listar()["dados"],
+        rodadas=partidas.rodadas(torneio_id=torneio_id_historico)["dados"],
         filtro_time=filtro_time,
         filtro_rodada=filtro_rodada,
         filtro_torneio=filtro_torneio,
         msg=msg,
         tipo=tipo,
         confrontos_atuais=torneio_ativo["confrontos"] if torneio_ativo else [],
-        confrontos_pendentes=torneios.confrontos_pendentes(),
-        partidas_rodada_atual=partidas.por_rodada(numero_rodada, torneio_id=torneio_ativo_id),
+        confrontos_pendentes=pendentes,
+        partidas_rodada_atual=partidas.por_rodada(numero_rodada, torneio_id=torneio_ativo_id)["dados"],
         numero_rodada=numero_rodada,
     )
 
@@ -92,38 +94,40 @@ def registrar_partida():
     except ValueError:
         return redirect(url_for("pagina_partidas", msg="Erro: gols devem ser números inteiros.", tipo="erro"))
 
-    torneio_id, rodada = torneios.contexto_partida(time1, time2)
+    ctx = torneios.contexto_partida(time1, time2)
+    torneio_id, rodada = ctx["dados"]
 
     resultado = partidas.registrar(time1, time2, gols1, gols2, rodada, torneio_id)
-    if isinstance(resultado, str):
-        return redirect(url_for("pagina_partidas", msg=resultado, tipo="erro"))
+    if resultado["status"] == 1:
+        return redirect(url_for("pagina_partidas", msg=resultado["mensagem"], tipo="erro"))
 
-    ranking.atualizar_pontos(resultado, torneio_id=torneio_id or "default")
+    ranking.atualizar_pontos(resultado["dados"], torneio_id=torneio_id or "default")
     return redirect(url_for("pagina_partidas", msg="Partida registrada com sucesso.", tipo="sucesso"))
 
 
 @app.route("/torneio")
 def pagina_torneio():
-    todos_times = times.listar_times()
+    todos_times = times.listar_times()["dados"]
     msg = request.args.get("msg", "")
     tipo = request.args.get("tipo", "")
-    torneio_ativo = torneios.get_ativo()
+    torneio_ativo = torneios.get_ativo()["dados"]
     numero_rodada = torneio_ativo["rodada"] if torneio_ativo else 0
+    pendentes = torneios.confrontos_pendentes()["dados"] or []
     return render_template(
         "torneio.html",
         times=todos_times,
         torneio_ativo=torneio_ativo,
-        todos_torneios=torneios.listar(),
+        todos_torneios=torneios.listar()["dados"],
         confrontos=torneio_ativo["confrontos"] if torneio_ativo else [],
         resultados=partidas.por_rodada(
             numero_rodada,
             torneio_id=torneio_ativo["id"] if torneio_ativo else None
-        ),
+        )["dados"],
         campeao=torneio_ativo["campeao"] if torneio_ativo else None,
         msg=msg,
         tipo=tipo,
         numero_rodada=numero_rodada,
-        rodada_completa=not torneios.confrontos_pendentes(),
+        rodada_completa=not pendentes,
     )
 
 
@@ -132,9 +136,9 @@ def gerar_confrontos():
     nomes = request.form.getlist("times_selecionados")
     nome_torneio = request.form.get("nome_torneio", "").strip()
     torneio = torneios.criar(nome_torneio, nomes)
-    if isinstance(torneio, str):
-        return redirect(url_for("pagina_torneio", msg=torneio, tipo="erro"))
-    ranking.criar_tabela(nomes, torneio_id=torneio["id"])
+    if torneio["status"] == 1:
+        return redirect(url_for("pagina_torneio", msg=torneio["mensagem"], tipo="erro"))
+    ranking.criar_tabela(nomes, torneio_id=torneio["dados"]["id"])
     return redirect(url_for("pagina_torneio"))
 
 
@@ -146,7 +150,8 @@ def ativar_torneio(torneio_id):
 
 @app.route("/torneio/avancar", methods=["POST"])
 def avancar_fase():
-    if torneios.confrontos_pendentes():
+    pendentes = torneios.confrontos_pendentes()["dados"]
+    if pendentes:
         return redirect(url_for("pagina_torneio",
             msg="Registre os resultados de todas as partidas na página de Partidas antes de avançar.", tipo="erro"))
     torneios.avancar()
@@ -155,7 +160,7 @@ def avancar_fase():
 
 @app.route("/torneio/reiniciar", methods=["POST"])
 def reiniciar_torneio():
-    torneio_ativo = torneios.get_ativo()
+    torneio_ativo = torneios.get_ativo()["dados"]
     if torneio_ativo:
         partidas.resetar(torneio_id=torneio_ativo["id"])
         ranking.criar_tabela(torneio_ativo["times"], torneio_id=torneio_ativo["id"])
@@ -172,8 +177,12 @@ def encerrar_torneio():
 @app.route("/ranking")
 def pagina_ranking():
     torneio_id = request.args.get("torneio_id", "").strip()
-    todos_torneios = torneios.listar()
-    classificacao = ranking.ordenar_classificacao(torneio_id) if torneio_id else []
+    todos_torneios = torneios.listar()["dados"]
+    if torneio_id:
+        res = ranking.ordenar_classificacao(torneio_id)
+        classificacao = res["dados"] if res["status"] == 0 else []
+    else:
+        classificacao = []
     torneio_selecionado = next((t for t in todos_torneios if t["id"] == torneio_id), None)
     return render_template(
         "ranking.html",

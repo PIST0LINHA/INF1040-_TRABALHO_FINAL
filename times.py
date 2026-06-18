@@ -75,14 +75,17 @@ def _carregar() -> int:
     return 1
 
 
-def inicializar() -> int:
+def inicializar() -> dict:
     """Carrega os dados persistidos de times do arquivo para a memória.
 
     Requisito:
         Permitir que o módulo de times esteja pronto para uso ao iniciar a aplicação.
 
     Retorno:
-        int: 0 se os dados foram carregados com sucesso, 1 se nenhum arquivo existir.
+        dict: {status: 0, mensagem: "Dados de times carregados com sucesso.", dados: None}
+              se os dados foram carregados com sucesso.
+              {status: 1, mensagem: "Nenhum arquivo de times encontrado...", dados: None}
+              se nenhum arquivo existir (estado iniciado vazio).
 
     Pré-condições:
         - Deve ser chamada antes de qualquer outra função do módulo.
@@ -96,10 +99,12 @@ def inicializar() -> int:
     Interface:
         nenhuma
     """
-    return _carregar()
+    if _carregar() == 0:
+        return {"status": 0, "mensagem": "Dados de times carregados com sucesso.", "dados": None}
+    return {"status": 1, "mensagem": "Nenhum arquivo de times encontrado. Estado iniciado vazio.", "dados": None}
 
 
-def criar_time(nome: str, jogadores: list) -> dict | str:
+def criar_time(nome: str, jogadores: list) -> dict:
     """Cria e registra um novo time com ID único gerado automaticamente.
 
     Requisito:
@@ -110,16 +115,20 @@ def criar_time(nome: str, jogadores: list) -> dict | str:
         jogadores (list): Lista de strings com os nomes dos jogadores. Pode ser [].
 
     Retorno:
-        dict: {id, nome, jogadores} em caso de sucesso.
-        str: Mensagem de erro se nome vazio ou duplicado.
+        dict: {status: 0, mensagem: "Time '...' criado com sucesso.",
+               dados: {id, nome, jogadores}}
+              em caso de sucesso.
+              {status: 1, mensagem: "Erro: ...", dados: None}
+              se nome vazio ou duplicado.
 
     Pré-condições:
         - nome é uma string (pode estar em branco, erro será retornado).
         - jogadores é uma lista (None também é aceito e tratado como []).
 
     Pós-condições:
-        - Em caso de sucesso, o time é adicionado a _times e _proximo_id é incrementado.
-        - Em caso de erro, _times permanece inalterado.
+        - Em caso de sucesso (status 0), o time é adicionado a _times
+          e _proximo_id é incrementado.
+        - Em caso de erro (status 1), _times permanece inalterado.
 
     Restrições:
         Pública — exposta via __all__.
@@ -129,10 +138,10 @@ def criar_time(nome: str, jogadores: list) -> dict | str:
     """
     global _proximo_id
     if not nome or not nome.strip():
-        return "Erro: nome do time não pode ser vazio."
+        return {"status": 1, "mensagem": "Erro: nome do time não pode ser vazio.", "dados": None}
     for time in _times:
         if time["nome"].lower() == nome.strip().lower():
-            return f"Erro: já existe um time com o nome '{nome}'."
+            return {"status": 1, "mensagem": f"Erro: já existe um time com o nome '{nome}'.", "dados": None}
     novo_time = {
         "id": str(_proximo_id),
         "nome": nome.strip(),
@@ -140,10 +149,10 @@ def criar_time(nome: str, jogadores: list) -> dict | str:
     }
     _proximo_id += 1
     _times.append(novo_time)
-    return novo_time
+    return {"status": 0, "mensagem": f"Time '{novo_time['nome']}' criado com sucesso.", "dados": novo_time}
 
 
-def buscar_time(identificador: str) -> dict | str:
+def buscar_time(identificador: str) -> dict:
     """Localiza e retorna os dados de um time pelo seu ID.
 
     Requisito:
@@ -153,8 +162,11 @@ def buscar_time(identificador: str) -> dict | str:
         identificador (str): ID do time a ser buscado.
 
     Retorno:
-        dict: {id, nome, jogadores} se o time for encontrado.
-        str: Mensagem de erro se ID vazio ou time não encontrado.
+        dict: {status: 0, mensagem: "Time '...' encontrado.",
+               dados: {id, nome, jogadores}}
+              se o time for encontrado.
+              {status: 1, mensagem: "Erro: ...", dados: None}
+              se ID vazio ou time não encontrado.
 
     Pré-condições:
         - identificador é uma string.
@@ -169,21 +181,23 @@ def buscar_time(identificador: str) -> dict | str:
         nenhuma
     """
     if not identificador or not identificador.strip():
-        return "Erro: ID não pode ser vazio."
+        return {"status": 1, "mensagem": "Erro: ID não pode ser vazio.", "dados": None}
     for time in _times:
         if time["id"] == identificador:
-            return time
-    return f"Erro: time com ID '{identificador}' não encontrado."
+            return {"status": 0, "mensagem": f"Time '{time['nome']}' encontrado.", "dados": time}
+    return {"status": 1, "mensagem": f"Erro: time com ID '{identificador}' não encontrado.", "dados": None}
 
 
-def listar_times() -> list:
+def listar_times() -> dict:
     """Retorna cópia da lista de todos os times cadastrados.
 
     Requisito:
         Permitir visualização de todos os times disponíveis.
 
     Retorno:
-        list: Lista de dicts {id, nome, jogadores}; [] se não houver times.
+        dict: {status: 0, mensagem: "N time(s) encontrado(s).",
+               dados: [lista de dicts {id, nome, jogadores}]}
+              Dados é sempre uma lista; [] se não houver times cadastrados.
 
     Pré-condições:
         - nenhuma.
@@ -197,10 +211,11 @@ def listar_times() -> list:
     Interface:
         nenhuma
     """
-    return list(_times)
+    copia = list(_times)
+    return {"status": 0, "mensagem": f"{len(copia)} time(s) encontrado(s).", "dados": copia}
 
 
-def remover_time(identificador: str) -> str:
+def remover_time(identificador: str) -> dict:
     """Remove um time da lista interna pelo seu ID.
 
     Requisito:
@@ -210,15 +225,18 @@ def remover_time(identificador: str) -> str:
         identificador (str): ID do time a ser removido.
 
     Retorno:
-        str: Mensagem de sucesso com o nome do time removido.
-             Mensagem de erro se ID vazio ou time não encontrado.
+        dict: {status: 0, mensagem: "Time '...' removido com sucesso.",
+               dados: {id, nome, jogadores}}
+              do time removido em caso de sucesso.
+              {status: 1, mensagem: "Erro: ...", dados: None}
+              se ID vazio ou time não encontrado.
 
     Pré-condições:
         - identificador é uma string.
 
     Pós-condições:
-        - Em caso de sucesso, o time é retirado de _times.
-        - Em caso de erro, _times permanece inalterado.
+        - Em caso de sucesso (status 0), o time é retirado de _times.
+        - Em caso de erro (status 1), _times permanece inalterado.
 
     Restrições:
         Pública — exposta via __all__.
@@ -227,13 +245,12 @@ def remover_time(identificador: str) -> str:
         nenhuma
     """
     if not identificador or not identificador.strip():
-        return "Erro: ID não pode ser vazio."
+        return {"status": 1, "mensagem": "Erro: ID não pode ser vazio.", "dados": None}
     for i, time in enumerate(_times):
         if time["id"] == identificador:
-            nome = time["nome"]
-            _times.pop(i)
-            return f"Time '{nome}' removido com sucesso."
-    return f"Erro: time com ID '{identificador}' não encontrado."
+            removido = _times.pop(i)
+            return {"status": 0, "mensagem": f"Time '{removido['nome']}' removido com sucesso.", "dados": removido}
+    return {"status": 1, "mensagem": f"Erro: time com ID '{identificador}' não encontrado.", "dados": None}
 
 
 def parsear_jogadores(raw: str) -> list:
@@ -263,14 +280,15 @@ def parsear_jogadores(raw: str) -> list:
     return [j.strip() for j in raw.split(",") if j.strip()] if raw else []
 
 
-def salvar() -> int:
+def salvar() -> dict:
     """Persiste o estado atual dos times no arquivo de dados.
 
     Requisito:
         Garantir durabilidade dos dados de times entre sessões.
 
     Retorno:
-        int: 0 em caso de sucesso; erros de I/O propagam exceção.
+        dict: {status: 0, mensagem: "Times salvos com sucesso.", dados: None}
+              Erros de I/O propagam exceção.
 
     Pré-condições:
         - _ARQUIVO aponta para um caminho gravável.
@@ -284,4 +302,5 @@ def salvar() -> int:
     Interface:
         nenhuma
     """
-    return _salvar()
+    _salvar()
+    return {"status": 0, "mensagem": "Times salvos com sucesso.", "dados": None}

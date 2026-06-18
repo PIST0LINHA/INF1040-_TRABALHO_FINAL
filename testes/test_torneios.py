@@ -17,52 +17,54 @@ def resetar_estado():
 
 def teste_criar_retorna_dict_com_dados():
     resetar_estado()
-    t = torneios.criar("Copa Teste", ["A", "B", "C", "D"])
+    r = torneios.criar("Copa Teste", ["A", "B", "C", "D"])
+    dados = r["dados"]
     passou = (
-        isinstance(t, dict)
-        and t["nome"] == "Copa Teste"
-        and t["times"] == ["A", "B", "C", "D"]
-        and t["rodada"] == 1
-        and t["campeao"] is None
-        and len(t["confrontos"]) == 2
+        r["status"] == 0
+        and dados["nome"] == "Copa Teste"
+        and dados["times"] == ["A", "B", "C", "D"]
+        and dados["rodada"] == 1
+        and dados["campeao"] is None
+        and len(dados["confrontos"]) == 2
     )
-    registrar("criar: retorna dict com dados do torneio criado", passou, str(t))
+    registrar("criar: retorna status 0 e dados do torneio criado", passou, str(r))
 
 
 def teste_criar_nome_vazio_recebe_nome_padrao():
     resetar_estado()
-    t = torneios.criar("", ["A", "B"])
-    passou = isinstance(t, dict) and t["nome"].startswith("Torneio")
-    registrar("criar: nome vazio recebe nome padrão", passou, str(t))
+    r = torneios.criar("", ["A", "B"])
+    passou = r["status"] == 0 and r["dados"]["nome"].startswith("Torneio")
+    registrar("criar: nome vazio recebe nome padrão e retorna status 0", passou, str(r))
 
 
 def teste_criar_numero_impar_de_times():
     resetar_estado()
-    resultado = torneios.criar("Impar", ["A", "B", "C"])
-    passou = isinstance(resultado, str) and resultado.startswith("Erro")
-    registrar("criar: número ímpar de times retorna mensagem de erro", passou, str(resultado))
+    r = torneios.criar("Impar", ["A", "B", "C"])
+    passou = r["status"] == 1 and "Erro" in r["mensagem"]
+    registrar("criar: número ímpar de times retorna status 1 com mensagem de erro", passou, str(r))
 
 
 def teste_criar_menos_de_dois_times():
     resetar_estado()
-    resultado = torneios.criar("Pequeno", ["A"])
-    passou = isinstance(resultado, str) and resultado.startswith("Erro")
-    registrar("criar: menos de 2 times retorna mensagem de erro", passou, str(resultado))
+    r = torneios.criar("Pequeno", ["A"])
+    passou = r["status"] == 1 and "Erro" in r["mensagem"]
+    registrar("criar: menos de 2 times retorna status 1 com mensagem de erro", passou, str(r))
 
 
 def teste_listar_retorna_todos_os_torneios():
     resetar_estado()
     torneios.criar("T1", ["A", "B"])
     torneios.criar("T2", ["C", "D"])
-    lista = torneios.listar()
-    passou = isinstance(lista, list) and len(lista) == 2
-    registrar("listar: retorna todos os torneios criados", passou, str(lista))
+    r = torneios.listar()
+    passou = r["status"] == 0 and isinstance(r["dados"], list) and len(r["dados"]) == 2
+    registrar("listar: retorna status 0 e todos os torneios criados", passou, str(r))
 
 
 def teste_listar_vazio():
     resetar_estado()
-    passou = torneios.listar() == []
-    registrar("listar: sem torneios retorna lista vazia", passou)
+    r = torneios.listar()
+    passou = r["status"] == 0 and r["dados"] == []
+    registrar("listar: sem torneios retorna status 0 e lista vazia", passou, str(r))
 
 
 # --- get_ativo / set_ativo / desativar ---
@@ -70,8 +72,8 @@ def teste_listar_vazio():
 def teste_criar_define_torneio_como_ativo():
     resetar_estado()
     t = torneios.criar("Ativo", ["A", "B"])
-    ativo = torneios.get_ativo()
-    passou = ativo is not None and ativo["id"] == t["id"]
+    ativo = torneios.get_ativo()["dados"]
+    passou = ativo is not None and ativo["id"] == t["dados"]["id"]
     registrar("criar: define o torneio criado como ativo", passou, str(ativo))
 
 
@@ -79,24 +81,24 @@ def teste_set_ativo_torneio_existente():
     resetar_estado()
     t1 = torneios.criar("T1", ["A", "B"])
     torneios.criar("T2", ["C", "D"])
-    resultado = torneios.set_ativo(t1["id"])
-    passou = resultado == 0 and torneios.get_ativo()["id"] == t1["id"]
-    registrar("set_ativo: torneio existente retorna 0 e torna-se ativo", passou, str(resultado))
+    r = torneios.set_ativo(t1["dados"]["id"])
+    passou = r["status"] == 0 and torneios.get_ativo()["dados"]["id"] == t1["dados"]["id"]
+    registrar("set_ativo: torneio existente retorna status 0 e torna-se ativo", passou, str(r))
 
 
 def teste_set_ativo_torneio_inexistente():
     resetar_estado()
-    resultado = torneios.set_ativo("id_invalido")
-    passou = resultado == 1
-    registrar("set_ativo: ID inexistente retorna 1", passou, str(resultado))
+    r = torneios.set_ativo("id_invalido")
+    passou = r["status"] == 1
+    registrar("set_ativo: ID inexistente retorna status 1", passou, str(r))
 
 
 def teste_desativar_remove_ativo():
     resetar_estado()
     torneios.criar("T1", ["A", "B"])
-    resultado = torneios.desativar()
-    passou = resultado == 0 and torneios.get_ativo() is None
-    registrar("desativar: retorna 0 e remove o torneio ativo", passou, str(resultado))
+    r = torneios.desativar()
+    passou = r["status"] == 0 and torneios.get_ativo()["dados"] is None
+    registrar("desativar: retorna status 0 e remove o torneio ativo", passou, str(r))
 
 
 # --- get_ativo campos: confrontos / rodada / campeao ---
@@ -104,7 +106,7 @@ def teste_desativar_remove_ativo():
 def teste_get_ativo_confrontos_retorna_lista_do_ativo():
     resetar_estado()
     torneios.criar("T1", ["A", "B"])
-    ativo = torneios.get_ativo()
+    ativo = torneios.get_ativo()["dados"]
     confrontos = ativo["confrontos"] if ativo else []
     passou = isinstance(confrontos, list) and len(confrontos) == 1
     registrar("get_ativo: campo confrontos retorna lista do torneio ativo", passou, str(confrontos))
@@ -112,32 +114,32 @@ def teste_get_ativo_confrontos_retorna_lista_do_ativo():
 
 def teste_get_ativo_none_confrontos_vazio():
     resetar_estado()
-    ativo = torneios.get_ativo()
+    ativo = torneios.get_ativo()["dados"]
     confrontos = ativo["confrontos"] if ativo else []
     passou = confrontos == []
-    registrar("get_ativo: None sem torneio ativo resulta em confrontos vazio", passou)
+    registrar("get_ativo: sem torneio ativo resulta em confrontos vazio", passou)
 
 
 def teste_get_ativo_rodada_retorna_rodada_atual():
     resetar_estado()
     torneios.criar("T1", ["A", "B"])
-    ativo = torneios.get_ativo()
+    ativo = torneios.get_ativo()["dados"]
     passou = ativo is not None and ativo["rodada"] == 1
     registrar("get_ativo: campo rodada retorna 1 na primeira rodada", passou, str(ativo))
 
 
 def teste_get_ativo_none_rodada_zero():
     resetar_estado()
-    ativo = torneios.get_ativo()
+    ativo = torneios.get_ativo()["dados"]
     rodada = ativo["rodada"] if ativo else 0
     passou = rodada == 0
-    registrar("get_ativo: None sem torneio ativo resulta em rodada 0", passou, str(rodada))
+    registrar("get_ativo: sem torneio ativo resulta em rodada 0", passou, str(rodada))
 
 
 def teste_get_ativo_campeao_sem_campeao_retorna_none():
     resetar_estado()
     torneios.criar("T1", ["A", "B"])
-    ativo = torneios.get_ativo()
+    ativo = torneios.get_ativo()["dados"]
     passou = ativo is not None and ativo["campeao"] is None
     registrar("get_ativo: campo campeao sem campeão definido retorna None", passou, str(ativo))
 
@@ -147,26 +149,36 @@ def teste_get_ativo_campeao_sem_campeao_retorna_none():
 def teste_confrontos_pendentes_sem_resultados():
     resetar_estado()
     torneios.criar("T1", ["A", "B"])
-    pendentes = torneios.confrontos_pendentes()
-    passou = isinstance(pendentes, list) and len(pendentes) == 1
-    registrar("confrontos_pendentes: retorna confrontos sem resultado registrado", passou, str(pendentes))
+    r = torneios.confrontos_pendentes()
+    pendentes = r["dados"]
+    passou = r["status"] == 0 and isinstance(pendentes, list) and len(pendentes) == 1
+    registrar("confrontos_pendentes: retorna status 0 e confrontos sem resultado", passou, str(r))
 
 
 def teste_confrontos_pendentes_falso_sem_resultados():
     resetar_estado()
     torneios.criar("T1", ["A", "B"])
-    passou = len(torneios.confrontos_pendentes()) > 0
-    registrar("confrontos_pendentes: retorna lista não vazia sem resultados registrados", passou)
+    r = torneios.confrontos_pendentes()
+    passou = r["status"] == 0 and len(r["dados"]) > 0
+    registrar("confrontos_pendentes: lista não vazia sem resultados registrados", passou, str(r))
 
 
 def teste_confrontos_pendentes_vazio_apos_registrar():
     resetar_estado()
     t = torneios.criar("T1", ["A", "B"])
-    ativo = torneios.get_ativo()
+    ativo = torneios.get_ativo()["dados"]
     c = ativo["confrontos"][0]
-    partidas.registrar(c[0], c[1], 1, 0, rodada=1, torneio_id=t["id"])
-    passou = torneios.confrontos_pendentes() == []
-    registrar("confrontos_pendentes: retorna lista vazia após registrar todos os resultados", passou)
+    partidas.registrar(c[0], c[1], 1, 0, rodada=1, torneio_id=t["dados"]["id"])
+    r = torneios.confrontos_pendentes()
+    passou = r["status"] == 0 and r["dados"] == []
+    registrar("confrontos_pendentes: retorna status 0 e lista vazia após registrar todos", passou, str(r))
+
+
+def teste_confrontos_pendentes_sem_torneio_ativo():
+    resetar_estado()
+    r = torneios.confrontos_pendentes()
+    passou = r["status"] == 1 and r["dados"] is None
+    registrar("confrontos_pendentes: sem torneio ativo retorna status 1 e dados None", passou, str(r))
 
 
 # --- resetar_ativo ---
@@ -174,131 +186,127 @@ def teste_confrontos_pendentes_vazio_apos_registrar():
 def teste_resetar_ativo_reinicia_torneio():
     resetar_estado()
     t = torneios.criar("T1", ["A", "B"])
-    ativo = torneios.get_ativo()
+    ativo = torneios.get_ativo()["dados"]
     c = ativo["confrontos"][0]
-    partidas.registrar(c[0], c[1], 2, 0, rodada=1, torneio_id=t["id"])
-    resultado = torneios.resetar_ativo()
-    ativo = torneios.get_ativo()
+    partidas.registrar(c[0], c[1], 2, 0, rodada=1, torneio_id=t["dados"]["id"])
+    r = torneios.resetar_ativo()
+    ativo = torneios.get_ativo()["dados"]
     passou = (
-        resultado == 0
+        r["status"] == 0
         and ativo["rodada"] == 1
         and ativo["campeao"] is None
     )
-    registrar("resetar_ativo: reinicia rodada e campeão do torneio ativo", passou, str(resultado))
+    registrar("resetar_ativo: reinicia rodada e campeão do torneio ativo", passou, str(r))
 
 
-def teste_resetar_ativo_sem_ativo_retorna_um():
+def teste_resetar_ativo_sem_ativo_retorna_status_um():
     resetar_estado()
-    passou = torneios.resetar_ativo() == 1
-    registrar("resetar_ativo: sem torneio ativo retorna 1", passou)
+    r = torneios.resetar_ativo()
+    passou = r["status"] == 1
+    registrar("resetar_ativo: sem torneio ativo retorna status 1", passou, str(r))
 
 
 # --- inicializar / salvar ---
 
-def teste_inicializar_retorna_inteiro():
-    resultado = torneios.inicializar()
-    passou = isinstance(resultado, int)
-    registrar("inicializar: retorna int (0 se arquivo existe, 1 se não existe)", passou, str(resultado))
+def teste_inicializar_retorna_dict():
+    r = torneios.inicializar()
+    passou = isinstance(r, dict) and "status" in r and "mensagem" in r and "dados" in r
+    registrar("inicializar: retorna dict com status, mensagem e dados", passou, str(r))
 
 
-def teste_salvar_retorna_zero():
+def teste_salvar_retorna_status_zero():
     resetar_estado()
     torneios.criar("T_salvar", ["A", "B"])
-    resultado = torneios.salvar()
-    passou = resultado == 0
-    registrar("salvar: persiste dados e retorna 0", passou, str(resultado))
+    r = torneios.salvar()
+    passou = r["status"] == 0
+    registrar("salvar: persiste dados e retorna status 0", passou, str(r))
 
 
 # --- get_ativo ---
 
-def teste_get_ativo_retorna_dict_quando_ativo():
+def teste_get_ativo_retorna_dados_quando_ativo():
     resetar_estado()
     t = torneios.criar("T_ativo", ["A", "B"])
-    ativo = torneios.get_ativo()
-    passou = isinstance(ativo, dict) and ativo["id"] == t["id"]
-    registrar("get_ativo: retorna dict do torneio ativo", passou, str(ativo))
+    r = torneios.get_ativo()
+    passou = r["status"] == 0 and r["dados"]["id"] == t["dados"]["id"]
+    registrar("get_ativo: retorna status 0 e dados do torneio ativo", passou, str(r))
 
 
-def teste_get_ativo_retorna_none_sem_ativo():
+def teste_get_ativo_retorna_status_um_sem_ativo():
     resetar_estado()
-    passou = torneios.get_ativo() is None
-    registrar("get_ativo: sem torneio ativo retorna None", passou)
-
-
-# --- contexto_partida (substitui eh_confronto_ativo) ---
-
-def teste_contexto_partida_par_valido_retorna_dados():
-    resetar_estado()
-    torneios.criar("T_conf", ["A", "B"])
-    ativo = torneios.get_ativo()
-    c = ativo["confrontos"][0]
-    torneio_id, rodada = torneios.contexto_partida(c[0], c[1])
-    passou = torneio_id is not None and rodada is not None
-    registrar("contexto_partida: par válido retorna (torneio_id, rodada) não nulos", passou, str(c))
-
-
-def teste_contexto_partida_par_invalido_retorna_none():
-    resetar_estado()
-    torneios.criar("T_conf2", ["A", "B"])
-    torneio_id, rodada = torneios.contexto_partida("X", "Y")
-    passou = torneio_id is None and rodada is None
-    registrar("contexto_partida: par inválido retorna (None, None)", passou)
-
-
-def teste_contexto_partida_sem_torneio_retorna_none():
-    resetar_estado()
-    torneio_id, rodada = torneios.contexto_partida("A", "B")
-    passou = torneio_id is None and rodada is None
-    registrar("contexto_partida: sem torneio ativo retorna (None, None)", passou)
+    r = torneios.get_ativo()
+    passou = r["status"] == 1 and r["dados"] is None
+    registrar("get_ativo: sem torneio ativo retorna status 1 e dados None", passou, str(r))
 
 
 # --- contexto_partida ---
 
+def teste_contexto_partida_par_valido_retorna_dados():
+    resetar_estado()
+    torneios.criar("T_conf", ["A", "B"])
+    ativo = torneios.get_ativo()["dados"]
+    c = ativo["confrontos"][0]
+    r = torneios.contexto_partida(c[0], c[1])
+    torneio_id, rodada = r["dados"]
+    passou = r["status"] == 0 and torneio_id is not None and rodada is not None
+    registrar("contexto_partida: par válido retorna status 0 e (torneio_id, rodada)", passou, str(r))
+
+
+def teste_contexto_partida_par_invalido_retorna_status_um():
+    resetar_estado()
+    torneios.criar("T_conf2", ["A", "B"])
+    r = torneios.contexto_partida("X", "Y")
+    torneio_id, rodada = r["dados"]
+    passou = r["status"] == 1 and torneio_id is None and rodada is None
+    registrar("contexto_partida: par inválido retorna status 1 e (None, None)", passou, str(r))
+
+
+def teste_contexto_partida_sem_torneio_retorna_status_um():
+    resetar_estado()
+    r = torneios.contexto_partida("A", "B")
+    torneio_id, rodada = r["dados"]
+    passou = r["status"] == 1 and torneio_id is None and rodada is None
+    registrar("contexto_partida: sem torneio ativo retorna status 1 e (None, None)", passou, str(r))
+
+
 def teste_contexto_partida_confronto_ativo():
     resetar_estado()
     t = torneios.criar("T_ctx", ["A", "B"])
-    ativo = torneios.get_ativo()
+    ativo = torneios.get_ativo()["dados"]
     c = ativo["confrontos"][0]
-    torneio_id, rodada = torneios.contexto_partida(c[0], c[1])
-    passou = torneio_id == t["id"] and rodada == 1
-    registrar("contexto_partida: confronto ativo retorna (torneio_id, rodada)", passou,
-              str((torneio_id, rodada)))
+    r = torneios.contexto_partida(c[0], c[1])
+    torneio_id, rodada = r["dados"]
+    passou = r["status"] == 0 and torneio_id == t["dados"]["id"] and rodada == 1
+    registrar("contexto_partida: confronto ativo retorna status 0 e (torneio_id, rodada)", passou, str(r))
 
 
 def teste_contexto_partida_sem_confronto():
     resetar_estado()
     torneios.criar("T_ctx2", ["A", "B"])
-    torneio_id, rodada = torneios.contexto_partida("X", "Y")
-    passou = torneio_id is None and rodada is None
-    registrar("contexto_partida: par não é confronto ativo retorna (None, None)", passou,
-              str((torneio_id, rodada)))
-
-
-def teste_contexto_partida_sem_torneio():
-    resetar_estado()
-    torneio_id, rodada = torneios.contexto_partida("A", "B")
-    passou = torneio_id is None and rodada is None
-    registrar("contexto_partida: sem torneio ativo retorna (None, None)", passou,
-              str((torneio_id, rodada)))
+    r = torneios.contexto_partida("X", "Y")
+    torneio_id, rodada = r["dados"]
+    passou = r["status"] == 1 and torneio_id is None and rodada is None
+    registrar("contexto_partida: par não é confronto ativo retorna status 1", passou, str(r))
 
 
 # --- avancar ---
 
-def teste_avancar_sem_torneio_ativo_retorna_um():
+def teste_avancar_sem_torneio_ativo_retorna_status_um():
     resetar_estado()
-    passou = torneios.avancar() == 1
-    registrar("avancar: sem torneio ativo retorna 1", passou)
+    r = torneios.avancar()
+    passou = r["status"] == 1
+    registrar("avancar: sem torneio ativo retorna status 1", passou, str(r))
 
 
 def teste_avancar_define_campeao():
     resetar_estado()
     t = torneios.criar("Final", ["A", "B"])
-    ativo = torneios.get_ativo()
+    ativo = torneios.get_ativo()["dados"]
     c = ativo["confrontos"][0]
-    partidas.registrar(c[0], c[1], 2, 0, rodada=1, torneio_id=t["id"])
-    resultado = torneios.avancar()
-    ativo = torneios.get_ativo()
-    passou = resultado == 0 and ativo["campeao"] == c[0]
+    partidas.registrar(c[0], c[1], 2, 0, rodada=1, torneio_id=t["dados"]["id"])
+    r = torneios.avancar()
+    ativo = torneios.get_ativo()["dados"]
+    passou = r["status"] == 0 and ativo["campeao"] == c[0]
     registrar("avancar: define campeão quando resta 1 time classificado", passou,
               str(ativo["campeao"] if ativo else None))
 
@@ -306,13 +314,13 @@ def teste_avancar_define_campeao():
 def teste_avancar_proxima_rodada():
     resetar_estado()
     t = torneios.criar("Semi", ["A", "B", "C", "D"])
-    ativo = torneios.get_ativo()
+    ativo = torneios.get_ativo()["dados"]
     for c in ativo["confrontos"]:
-        partidas.registrar(c[0], c[1], 2, 0, rodada=1, torneio_id=t["id"])
-    resultado = torneios.avancar()
-    ativo = torneios.get_ativo()
+        partidas.registrar(c[0], c[1], 2, 0, rodada=1, torneio_id=t["dados"]["id"])
+    r = torneios.avancar()
+    ativo = torneios.get_ativo()["dados"]
     passou = (
-        resultado == 0
+        r["status"] == 0
         and ativo["rodada"] == 2
         and len(ativo["confrontos"]) == 1
     )
@@ -326,9 +334,9 @@ def teste_resetar_remove_todos_torneios():
     resetar_estado()
     torneios.criar("T1", ["A", "B"])
     torneios.criar("T2", ["C", "D"])
-    resultado = torneios.resetar()
-    passou = resultado == 0 and torneios.listar() == [] and torneios.get_ativo() is None
-    registrar("resetar: remove todos os torneios e limpa o ativo", passou, str(torneios.listar()))
+    r = torneios.resetar()
+    passou = r["status"] == 0 and torneios.listar()["dados"] == [] and torneios.get_ativo()["dados"] is None
+    registrar("resetar: remove todos os torneios e limpa o ativo", passou, str(r))
 
 
 # --- execução ---
@@ -353,22 +361,22 @@ def executar_testes():
         teste_confrontos_pendentes_sem_resultados,
         teste_confrontos_pendentes_falso_sem_resultados,
         teste_confrontos_pendentes_vazio_apos_registrar,
+        teste_confrontos_pendentes_sem_torneio_ativo,
         teste_resetar_ativo_reinicia_torneio,
-        teste_resetar_ativo_sem_ativo_retorna_um,
-        teste_avancar_sem_torneio_ativo_retorna_um,
+        teste_resetar_ativo_sem_ativo_retorna_status_um,
+        teste_avancar_sem_torneio_ativo_retorna_status_um,
         teste_avancar_define_campeao,
         teste_avancar_proxima_rodada,
         teste_resetar_remove_todos_torneios,
-        teste_inicializar_retorna_inteiro,
-        teste_salvar_retorna_zero,
-        teste_get_ativo_retorna_dict_quando_ativo,
-        teste_get_ativo_retorna_none_sem_ativo,
+        teste_inicializar_retorna_dict,
+        teste_salvar_retorna_status_zero,
+        teste_get_ativo_retorna_dados_quando_ativo,
+        teste_get_ativo_retorna_status_um_sem_ativo,
         teste_contexto_partida_par_valido_retorna_dados,
-        teste_contexto_partida_par_invalido_retorna_none,
-        teste_contexto_partida_sem_torneio_retorna_none,
+        teste_contexto_partida_par_invalido_retorna_status_um,
+        teste_contexto_partida_sem_torneio_retorna_status_um,
         teste_contexto_partida_confronto_ativo,
         teste_contexto_partida_sem_confronto,
-        teste_contexto_partida_sem_torneio,
     ]
 
     for teste in testes:
