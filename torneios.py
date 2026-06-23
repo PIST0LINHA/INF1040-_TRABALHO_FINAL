@@ -167,24 +167,15 @@ def _gerar_confronto(lista_times: list) -> list:
     return confrontos
 
 
-def _avancar_fase(resultados: list) -> list:
-    """Determina os times classificados para a próxima fase com base nos resultados.
-
-    Em caso de empate, ambos os times avançam.
+def _resultado_do_confronto(confronto: tuple, resultados: list):
+    """Localiza a partida registrada que corresponde a um confronto (em qualquer ordem).
 
     Parâmetros:
-        resultados (list): Lista de dicts com as chaves:
-                           time1, time2, gols_time1, gols_time2.
+        confronto (tuple): Par (time1, time2).
+        resultados (list): Lista de partidas (dicts) da rodada.
 
     Retorno:
-        list: Lista de strings com os nomes dos times classificados.
-
-    Pré-condições:
-        - resultados é uma lista de dicts com as chaves obrigatórias acima.
-
-    Pós-condições:
-        - Cada partida contribui com 1 (vitória/derrota) ou 2 (empate) times
-          na lista retornada.
+        dict: A partida correspondente, ou None se não houver.
 
     Restrições:
         Interna — não exposta via __all__.
@@ -192,18 +183,11 @@ def _avancar_fase(resultados: list) -> list:
     Interface:
         nenhuma
     """
-    classificados = []
-    for partida in resultados:
-        gols1 = partida["gols_time1"]
-        gols2 = partida["gols_time2"]
-        if gols1 > gols2:
-            classificados.append(partida["time1"])
-        elif gols2 > gols1:
-            classificados.append(partida["time2"])
-        else:
-            classificados.append(partida["time1"])
-            classificados.append(partida["time2"])
-    return classificados
+    a, b = confronto
+    for p in resultados:
+        if (p["time1"] == a and p["time2"] == b) or (p["time1"] == b and p["time2"] == a):
+            return p
+    return None
 
 
 def inicializar() -> dict:
@@ -239,8 +223,8 @@ def criar(nome: str, nomes_times: list) -> dict:
     """Cria um novo torneio com eliminação simples e o define como ativo.
 
     Requisito:
-        Criar torneio com número par de times (>= 2) e nome único, gerando
-        os confrontos da primeira rodada aleatoriamente.
+        Criar torneio com número par de times (>= 2), sem times repetidos
+        e com nome único, gerando os confrontos da primeira rodada aleatoriamente.
 
     Parâmetros:
         nome (str): Nome do torneio. Se vazio, recebe nome padrão "Torneio N".
@@ -252,10 +236,11 @@ def criar(nome: str, nomes_times: list) -> dict:
                dados: {id, nome, times, rodada, campeao, confrontos}}
               em caso de sucesso.
               {status: 1, mensagem: "Erro: ...", dados: None}
-              se a lista tiver número ímpar, menos de 2 times ou nome duplicado.
+              se a lista tiver número ímpar, menos de 2 times, times
+              repetidos ou nome duplicado.
 
     Pré-condições:
-        - nomes_times é uma lista com len >= 2 e len % 2 == 0.
+        - nomes_times é uma lista com len >= 2, len % 2 == 0 e sem nomes repetidos.
 
     Pós-condições:
         - Em caso de sucesso (status 0), o torneio é adicionado a _torneios
@@ -273,8 +258,12 @@ def criar(nome: str, nomes_times: list) -> dict:
         return {"status": 1, "mensagem": "Erro: o torneio requer ao menos 2 times.", "dados": None}
     if len(nomes_times) % 2 != 0:
         return {"status": 1, "mensagem": "Erro: o número de times deve ser par.", "dados": None}
-    nome_final = nome.strip() if nome.strip() else f"Torneio {_proximo_id}"
-    if any(t["nome"].lower() == nome_final.lower() for t in _torneios):
+    # Normaliza espaços (inclusive internos) e caixa para comparar nomes de forma robusta.
+    nomes_norm = [" ".join(n.split()).lower() for n in nomes_times]
+    if len(set(nomes_norm)) != len(nomes_norm):
+        return {"status": 1, "mensagem": "Erro: há times repetidos; um time não pode jogar contra si mesmo.", "dados": None}
+    nome_final = " ".join(nome.split()) or f"Torneio {_proximo_id}"
+    if any(" ".join(t["nome"].split()).lower() == nome_final.lower() for t in _torneios):
         return {"status": 1, "mensagem": f"Erro: já existe um torneio com o nome \"{nome_final}\". Escolha outro nome.", "dados": None}
     torneio_id = str(_proximo_id)
     torneio = {
@@ -283,6 +272,8 @@ def criar(nome: str, nomes_times: list) -> dict:
         "times": nomes_times,
         "rodada": 1,
         "campeao": None,
+        "aguardando": [],
+        "desempate": False,
         "confrontos": _gerar_confronto(nomes_times),
     }
     _proximo_id += 1
@@ -378,10 +369,11 @@ def set_ativo(torneio_id: str) -> dict:
         nenhuma
     """
     global _torneio_ativo_id
-    if _get_torneio(torneio_id) is None:
+    t = _get_torneio(torneio_id)
+    if t is None:
         return {"status": 1, "mensagem": f"Erro: torneio com ID '{torneio_id}' não encontrado.", "dados": None}
     _torneio_ativo_id = torneio_id
-    return {"status": 0, "mensagem": f"Torneio '{torneio_id}' definido como ativo.", "dados": None}
+    return {"status": 0, "mensagem": f"Torneio '{t['nome']}' definido como ativo.", "dados": None}
 
 
 def desativar() -> dict:
@@ -468,15 +460,28 @@ def confrontos_pendentes() -> dict:
 def avancar() -> dict:
     """Avança para a próxima fase do torneio ou define o campeão.
 
-    Em empate, ambos os times avançam. Quando restar um único time,
-    ele é declarado campeão e os confrontos são esvaziados.
+    Regras de classificação por confronto:
+        - Confronto com vencedor: o vencedor avança.
+        - Empate em fase inicial (mais de 4 times vivos): ambos avançam (regra do slide).
+        - Empate em fase final (semifinal em diante, 4 times ou menos): NÃO avança
+          ninguém — gera um desempate (2º jogo) entre os mesmos times na rodada
+          seguinte; os confrontos já decididos ficam aguardando o desempate.
+
+    Bye:
+        - Se o número de classificados for ímpar, um time sorteado fica em
+          "aguardando" e passa direto para a rodada seguinte (ninguém é descartado).
+
+    Os times em t["aguardando"] (bye ou já decididos esperando um desempate) são
+    reincorporados aos classificados na chamada seguinte. Quando resta um único
+    time, ele é declarado campeão e os confrontos são esvaziados.
 
     Requisito:
-        Conduzir a progressão do torneio de eliminação simples fase a fase.
+        Conduzir a progressão do torneio de eliminação simples fase a fase,
+        com desempate por replay nas fases finais.
 
     Retorno:
-        dict: {status: 0, mensagem: "Avançado para a rodada N..." ou
-               "Torneio encerrado. Campeão: ...", dados: None}
+        dict: {status: 0, mensagem: "Avançado para a rodada N...",
+               "Desempate (2º jogo)..." ou "Torneio encerrado. Campeão: ...", dados: None}
               em caso de sucesso.
               {status: 1, mensagem: "Nenhum torneio ativo encontrado.", dados: None}
               se não houver torneio ativo.
@@ -488,10 +493,11 @@ def avancar() -> dict:
         - Todos os confrontos da rodada atual devem estar registrados.
 
     Pós-condições:
-        - Em caso de sucesso (status 0) com 1 classificado: t["campeao"] é definido
-          e t["confrontos"] = [].
-        - Em caso de sucesso (status 0) com mais de 1 classificado: t["rodada"] é
-          incrementado e novos confrontos são gerados.
+        - Empate em fase final: t["rodada"] incrementa, t["confrontos"] vira os
+          confrontos empatados (replay), t["desempate"] = True e os já decididos
+          entram em t["aguardando"].
+        - 1 classificado: t["campeao"] definido, t["confrontos"] = [].
+        - Demais casos: t["rodada"] incrementa e novos confrontos são gerados.
         - Em caso de erro (status 1), o torneio permanece inalterado.
 
     Restrições:
@@ -503,18 +509,74 @@ def avancar() -> dict:
     t = _get_torneio(_torneio_ativo_id)
     if not t:
         return {"status": 1, "mensagem": "Nenhum torneio ativo encontrado.", "dados": None}
+    if t.get("campeao"):
+        return {"status": 1, "mensagem": f"Torneio já encerrado. Campeão: {t['campeao']}.", "dados": None}
     pendentes = confrontos_pendentes()["dados"]
     if pendentes:
         return {"status": 1, "mensagem": f"Ainda há {len(pendentes)} confronto(s) pendente(s) nesta rodada.", "dados": None}
     resultados = partidas.por_rodada(t["rodada"], torneio_id=t["id"])["dados"]
-    classificados = _avancar_fase(resultados)
+
+    # Times que aguardam (bye anterior e/ou já decididos esperando um desempate).
+    aguardando = list(t.get("aguardando", []))
+    if t.get("bye"):  # compatibilidade com dados antigos
+        aguardando.append(t["bye"])
+        t.pop("bye", None)
+
+    # Fase final = semifinal em diante (4 times ou menos vivos no início da rodada).
+    jogaram = {time for c in t["confrontos"] for time in c}
+    fase_final = (len(jogaram) + len(aguardando)) <= 4
+
+    # Classifica confronto a confronto.
+    vencedores = []
+    empatados = []
+    avancam_ambos = []
+    for c in t["confrontos"]:
+        p = _resultado_do_confronto(c, resultados)
+        if p is None:
+            # Defensivo: não deve ocorrer (confrontos_pendentes garante todos registrados),
+            # mas evita quebra silenciosa em caso de dados inconsistentes.
+            return {"status": 1, "mensagem": f"Erro: resultado não encontrado para {c[0]} x {c[1]}.", "dados": None}
+        gols_c0, gols_c1 = (p["gols_time1"], p["gols_time2"]) if p["time1"] == c[0] else (p["gols_time2"], p["gols_time1"])
+        if gols_c0 > gols_c1:
+            vencedores.append(c[0])
+        elif gols_c1 > gols_c0:
+            vencedores.append(c[1])
+        elif fase_final:
+            empatados.append(tuple(c))
+        else:
+            avancam_ambos.extend([c[0], c[1]])
+
+    # Fase final com empate: desempate (2º jogo) só dos confrontos empatados.
+    if fase_final and empatados:
+        t["aguardando"] = aguardando + vencedores
+        t["rodada"] += 1
+        t["confrontos"] = empatados
+        t["desempate"] = True
+        pares = ", ".join(f"{c[0]} x {c[1]}" for c in empatados)
+        return {"status": 0, "mensagem": f"Empate em {pares}. Desempate (2º jogo) na rodada {t['rodada']}.", "dados": None}
+
+    # Caso normal: junta vencedores, os que avançam por empate (fase inicial) e os que aguardavam.
+    classificados = vencedores + avancam_ambos + aguardando
+    t["aguardando"] = []
+    t["desempate"] = False
+
     if len(classificados) == 1:
         t["campeao"] = classificados[0]
         t["confrontos"] = []
         return {"status": 0, "mensagem": f"Torneio encerrado. Campeão: {classificados[0]}.", "dados": None}
+
+    # Bye: número ímpar -> um time sorteado passa direto (ninguém é descartado).
+    em_espera = None
+    if len(classificados) % 2 != 0:
+        em_espera = classificados.pop(random.randrange(len(classificados)))
+        t["aguardando"] = [em_espera]
+
     t["rodada"] += 1
     t["confrontos"] = _gerar_confronto(classificados)
-    return {"status": 0, "mensagem": f"Avançado para a rodada {t['rodada']} com {len(t['confrontos'])} confronto(s).", "dados": None}
+    msg = f"Avançado para a rodada {t['rodada']} com {len(t['confrontos'])} confronto(s)."
+    if em_espera:
+        msg += f" {em_espera} passou de bye e joga na próxima."
+    return {"status": 0, "mensagem": msg, "dados": None}
 
 
 def resetar_ativo() -> dict:
@@ -548,6 +610,9 @@ def resetar_ativo() -> dict:
         return {"status": 1, "mensagem": "Não há torneio ativo para reiniciar.", "dados": None}
     t["rodada"] = 1
     t["campeao"] = None
+    t["aguardando"] = []
+    t["desempate"] = False
+    t.pop("bye", None)  # limpa campo legado, se existir
     t["confrontos"] = _gerar_confronto(t["times"])
     return {"status": 0, "mensagem": f"Torneio '{t['nome']}' reiniciado com sucesso.", "dados": None}
 
