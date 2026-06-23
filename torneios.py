@@ -16,14 +16,15 @@ _proximo_id = 1
 _torneio_ativo_id = None
 
 
-def _salvar() -> int:
+def _salvar() -> dict:
     """Grava o estado completo de todos os torneios no arquivo JSON.
 
     Requisito:
         Persistir dados de torneios entre sessões da aplicação.
 
     Retorno:
-        int: 0 sempre (erros de I/O propagam exceção).
+        dict: {status: 0, mensagem: "Torneios salvos.", dados: None}
+              Erros de I/O propagam exceção.
 
     Pré-condições:
         - _ARQUIVO aponta para um caminho gravável.
@@ -48,17 +49,20 @@ def _salvar() -> int:
     }
     with open(_ARQUIVO, "w", encoding="utf-8") as f:
         json.dump(dados, f, ensure_ascii=False, indent=2)
-    return 0
+    return {"status": 0, "mensagem": "Torneios salvos.", "dados": None}
 
 
-def _carregar() -> int:
+def _carregar() -> dict:
     """Lê os dados de torneios do arquivo JSON e popula as variáveis de módulo.
 
     Requisito:
         Restaurar estado de torneios ao iniciar a aplicação.
 
     Retorno:
-        int: 0 se os dados foram carregados, 1 se o arquivo não existir.
+        dict: {status: 0, mensagem: "Torneios carregados.", dados: None}
+              se os dados foram carregados.
+              {status: 1, mensagem: "Arquivo não encontrado.", dados: None}
+              se o arquivo não existir.
 
     Pré-condições:
         - As variáveis globais _torneios, _proximo_id e _torneio_ativo_id estão acessíveis.
@@ -75,7 +79,7 @@ def _carregar() -> int:
     """
     global _torneios, _proximo_id, _torneio_ativo_id
     if not os.path.exists(_ARQUIVO):
-        return 1
+        return {"status": 1, "mensagem": "Arquivo não encontrado.", "dados": None}
     with open(_ARQUIVO, "r", encoding="utf-8") as f:
         dados = json.load(f)
     _torneios = [
@@ -84,7 +88,7 @@ def _carregar() -> int:
     ]
     _proximo_id = dados.get("proximo_id", 1)
     _torneio_ativo_id = dados.get("torneio_ativo_id", None)
-    return 0
+    return {"status": 0, "mensagem": "Torneios carregados.", "dados": None}
 
 
 def _get_torneio(torneio_id):
@@ -214,7 +218,7 @@ def inicializar() -> dict:
     Interface:
         nenhuma
     """
-    if _carregar() == 0:
+    if _carregar()["status"] == 0:
         return {"status": 0, "mensagem": "Dados de torneios carregados com sucesso.", "dados": None}
     return {"status": 1, "mensagem": "Arquivo de torneios não encontrado. Estado iniciado vazio.", "dados": None}
 

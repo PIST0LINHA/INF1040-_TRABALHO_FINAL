@@ -8,14 +8,15 @@ _ARQUIVO = os.path.join(os.path.dirname(__file__), "dados", "ranking_data.json")
 _tabelas = {}  # {torneio_id: [lista de dicts]}
 
 
-def _salvar() -> int:
+def _salvar() -> dict:
     """Grava todas as tabelas de classificação no arquivo JSON.
 
     Requisito:
         Persistir rankings de torneios entre sessões da aplicação.
 
     Retorno:
-        int: 0 sempre (erros de I/O propagam exceção).
+        dict: {status: 0, mensagem: "Rankings salvos.", dados: None}
+              Erros de I/O propagam exceção.
 
     Pré-condições:
         - _ARQUIVO aponta para um caminho gravável.
@@ -31,17 +32,20 @@ def _salvar() -> int:
     """
     with open(_ARQUIVO, "w", encoding="utf-8") as f:
         json.dump(_tabelas, f, ensure_ascii=False, indent=2)
-    return 0
+    return {"status": 0, "mensagem": "Rankings salvos.", "dados": None}
 
 
-def _carregar() -> int:
+def _carregar() -> dict:
     """Lê as tabelas de classificação do arquivo JSON e popula a variável de módulo.
 
     Requisito:
         Restaurar rankings ao iniciar a aplicação.
 
     Retorno:
-        int: 0 se os dados foram carregados, 1 se o arquivo não existir.
+        dict: {status: 0, mensagem: "Rankings carregados.", dados: None}
+              se os dados foram carregados.
+              {status: 1, mensagem: "Arquivo não encontrado.", dados: None}
+              se o arquivo não existir.
 
     Pré-condições:
         - A variável global _tabelas está acessível.
@@ -57,14 +61,14 @@ def _carregar() -> int:
     """
     global _tabelas
     if not os.path.exists(_ARQUIVO):
-        return 1
+        return {"status": 1, "mensagem": "Arquivo não encontrado.", "dados": None}
     with open(_ARQUIVO, "r", encoding="utf-8") as f:
         dados = json.load(f)
     if isinstance(dados, list):
         _tabelas = {"default": dados}
     else:
         _tabelas = dados
-    return 0
+    return {"status": 0, "mensagem": "Rankings carregados.", "dados": None}
 
 
 def inicializar() -> dict:
@@ -91,7 +95,7 @@ def inicializar() -> dict:
     Interface:
         nenhuma
     """
-    if _carregar() == 0:
+    if _carregar()["status"] == 0:
         return {"status": 0, "mensagem": "Dados de ranking carregados com sucesso.", "dados": None}
     return {"status": 1, "mensagem": "Arquivo de ranking não encontrado. Estado iniciado vazio.", "dados": None}
 

@@ -10,14 +10,15 @@ _times = []
 _proximo_id = 1
 
 
-def _salvar() -> int:
+def _salvar() -> dict:
     """Grava o estado atual dos times no arquivo JSON de persistência.
 
     Requisito:
         Persistir dados de times entre sessões da aplicação.
 
     Retorno:
-        int: 0 sempre (escrita bem-sucedida; erros de I/O propagam exceção).
+        dict: {status: 0, mensagem: "Times salvos.", dados: None}
+              Erros de I/O propagam exceção.
 
     Pré-condições:
         - _ARQUIVO aponta para um caminho gravável.
@@ -33,17 +34,20 @@ def _salvar() -> int:
     """
     with open(_ARQUIVO, "w", encoding="utf-8") as f:
         json.dump({"times": _times, "proximo_id": _proximo_id}, f, ensure_ascii=False, indent=2)
-    return 0
+    return {"status": 0, "mensagem": "Times salvos.", "dados": None}
 
 
-def _carregar() -> int:
+def _carregar() -> dict:
     """Lê os dados de times do arquivo JSON e popula as variáveis de módulo.
 
     Requisito:
         Restaurar estado de times ao iniciar a aplicação.
 
     Retorno:
-        int: 0 se os dados foram carregados, 1 se nenhum arquivo foi encontrado.
+        dict: {status: 0, mensagem: "Times carregados.", dados: None}
+              se os dados foram carregados.
+              {status: 1, mensagem: "Arquivo não encontrado.", dados: None}
+              se nenhum arquivo for encontrado.
 
     Pré-condições:
         - As variáveis globais _times e _proximo_id estão acessíveis.
@@ -64,15 +68,15 @@ def _carregar() -> int:
             dados = json.load(f)
         _times = dados.get("times", [])
         _proximo_id = dados.get("proximo_id", 1)
-        return 0
+        return {"status": 0, "mensagem": "Times carregados.", "dados": None}
     if os.path.exists(_ARQUIVO_INICIAL):
         with open(_ARQUIVO_INICIAL, "r", encoding="utf-8") as f:
             dados = json.load(f)
         _times = dados.get("times", [])
         if _times:
             _proximo_id = max(int(t["id"]) for t in _times) + 1
-        return 0
-    return 1
+        return {"status": 0, "mensagem": "Times carregados.", "dados": None}
+    return {"status": 1, "mensagem": "Arquivo não encontrado.", "dados": None}
 
 
 def inicializar() -> dict:
@@ -99,7 +103,7 @@ def inicializar() -> dict:
     Interface:
         nenhuma
     """
-    if _carregar() == 0:
+    if _carregar()["status"] == 0:
         return {"status": 0, "mensagem": "Dados de times carregados com sucesso.", "dados": None}
     return {"status": 1, "mensagem": "Nenhum arquivo de times encontrado. Estado iniciado vazio.", "dados": None}
 
@@ -253,7 +257,7 @@ def remover_time(identificador: str) -> dict:
     return {"status": 1, "mensagem": f"Erro: time com ID '{identificador}' não encontrado.", "dados": None}
 
 
-def parsear_jogadores(raw: str) -> list:
+def parsear_jogadores(raw: str) -> dict:
     """Converte uma string de nomes separados por vírgula em lista de strings.
 
     Requisito:
@@ -263,13 +267,15 @@ def parsear_jogadores(raw: str) -> list:
         raw (str): String com nomes separados por vírgula. Pode ser vazia ou None.
 
     Retorno:
-        list: Lista de strings com nomes sem espaços extras; [] se raw for vazio/None.
+        dict: {status: 0, mensagem: "N jogador(es) parseado(s).",
+               dados: lista de strings com nomes sem espaços extras}
+              Dados é [] se raw for vazio/None.
 
     Pré-condições:
         - raw é uma string ou None.
 
     Pós-condições:
-        - Cada elemento da lista retornada é uma string não vazia sem espaços extras.
+        - Cada elemento de dados é uma string não vazia sem espaços extras.
 
     Restrições:
         Pública — exposta via __all__.
@@ -277,7 +283,8 @@ def parsear_jogadores(raw: str) -> list:
     Interface:
         nenhuma
     """
-    return [j.strip() for j in raw.split(",") if j.strip()] if raw else []
+    jogadores = [j.strip() for j in raw.split(",") if j.strip()] if raw else []
+    return {"status": 0, "mensagem": f"{len(jogadores)} jogador(es) parseado(s).", "dados": jogadores}
 
 
 def salvar() -> dict:

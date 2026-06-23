@@ -118,19 +118,19 @@ def teste_remover_time_id_vazio():
 
 def teste_parsear_jogadores_string_valida():
     resultado = times.parsear_jogadores("Ana, Bruno, Carlos")
-    passou = resultado == ["Ana", "Bruno", "Carlos"]
+    passou = resultado["status"] == 0 and resultado["dados"] == ["Ana", "Bruno", "Carlos"]
     registrar("parsear_jogadores: string com nomes separados por vírgula", passou, str(resultado))
 
 
 def teste_parsear_jogadores_string_vazia():
     resultado = times.parsear_jogadores("")
-    passou = resultado == []
+    passou = resultado["status"] == 0 and resultado["dados"] == []
     registrar("parsear_jogadores: string vazia retorna lista vazia", passou, str(resultado))
 
 
 def teste_parsear_jogadores_espacos_extras():
     resultado = times.parsear_jogadores("  Ana ,  Bruno  ")
-    passou = resultado == ["Ana", "Bruno"]
+    passou = resultado["status"] == 0 and resultado["dados"] == ["Ana", "Bruno"]
     registrar("parsear_jogadores: espaços extras são removidos", passou, str(resultado))
 
 

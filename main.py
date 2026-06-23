@@ -34,7 +34,7 @@ def pagina_times():
 def criar_time():
     nome = request.form.get("nome", "").strip()
     jogadores_raw = request.form.get("jogadores", "").strip()
-    jogadores = times.parsear_jogadores(jogadores_raw)
+    jogadores = times.parsear_jogadores(jogadores_raw)["dados"]
     resultado = times.criar_time(nome, jogadores)
     if resultado["status"] == 0:
         return redirect(url_for("pagina_times", msg=f"Time '{resultado['dados']['nome']}' criado com sucesso.", tipo="sucesso"))
