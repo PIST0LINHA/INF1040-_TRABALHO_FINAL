@@ -3,3 +3,12 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+# Documentação gerada (não versionar)
+docs_modulo_torneios.html
+docs_modulo_torneios.pdf
+
+# Ferramentas/IDE
+.claude/
+.coverage
+.coverage.*

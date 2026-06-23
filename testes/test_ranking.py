@@ -1,5 +1,8 @@
-import sys, os; sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+import sys, os, tempfile; sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import ranking
+
+# Isolamento: testes nunca escrevem nos arquivos reais de dados/.
+ranking._ARQUIVO = os.path.join(tempfile.gettempdir(), "test_ranking_data.json")
 
 resultados = []
 

@@ -18,10 +18,14 @@
             <a href="/ranking?torneio_id={{ torneio_ativo.id }}" class="btn btn-primario">Ver Ranking →</a>
             <form action="/torneio/reiniciar" method="POST" style="margin:0;">
                 <button type="submit" class="btn btn-aviso"
-                        onclick="return confirm('Reiniciar este torneio? As partidas e o ranking serão apagados.')">
+                        onclick="return confirm('Reiniciar este torneio com os MESMOS times? As partidas e o ranking serão apagados.')">
                     Reiniciar Torneio
                 </button>
             </form>
+            <button type="button" class="btn btn-secundario" onclick="reiniciarComNovosTimes()"
+                    title="Recomeçar escolhendo os times (os atuais já vêm marcados; você pode adicionar outros).">
+                Reiniciar com novos times
+            </button>
             <form action="/torneio/encerrar" method="POST" style="margin:0;">
                 <button type="submit" class="btn btn-sucesso"
                         onclick="return confirm('Encerrar este torneio e criar um novo? O torneio atual ficará salvo na lista.')">
@@ -102,7 +106,15 @@
     <div class="card">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
             <div>
-                <h2 style="font-size:1.1rem; color:#3b1fa3; margin:0;">{{ torneio_ativo.nome }}</h2>
+                <h2 style="font-size:1.1rem; color:#3b1fa3; margin:0;">
+                    {{ torneio_ativo.nome }}
+                    {% if torneio_ativo.desempate %}
+                        <span style="font-size:0.72rem; background:#f59e0b; color:#fff; font-weight:700;
+                                     padding:0.1rem 0.55rem; border-radius:999px; margin-left:0.4rem; vertical-align:middle;">
+                            DESEMPATE
+                        </span>
+                    {% endif %}
+                </h2>
                 <span style="font-size:0.82rem; color:#9ca3af;">Rodada {{ numero_rodada }} · {{ torneio_ativo.times | length }} times</span>
             </div>
             <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
@@ -121,9 +133,14 @@
                         Avançar Fase
                     </span>
                 {% endif %}
+                <button type="button" class="btn btn-secundario" style="padding:0.4rem 0.9rem; font-size:0.85rem;"
+                        onclick="reiniciarComNovosTimes()"
+                        title="Recomeçar escolhendo os times (os atuais já vêm marcados; você pode adicionar outros).">
+                    Reiniciar com novos times
+                </button>
                 <form action="/torneio/reiniciar" method="POST" style="margin:0;">
                     <button type="submit" class="btn btn-perigo" style="padding:0.4rem 0.9rem; font-size:0.85rem;"
-                            onclick="return confirm('Reiniciar este torneio? As partidas e o ranking serão apagados.')">
+                            onclick="return confirm('Reiniciar este torneio com os MESMOS times? As partidas e o ranking serão apagados.')">
                         Reiniciar
                     </button>
                 </form>
@@ -152,10 +169,19 @@
     </div>
     {% endif %}
 
-    <!-- Criar novo torneio — só disponível quando não há torneio em andamento -->
-    {% if not torneio_ativo %}
+{% endif %}{# fim: not campeao #}
+
+    <!-- Criar novo torneio — sempre disponível -->
     <div class="card">
         <h2 style="font-size:1.1rem; color:#3b1fa3; margin-bottom:1.25rem;">Novo Torneio</h2>
+
+        {% if torneio_ativo and not campeao %}
+            <p style="font-size:0.85rem; color:#92400e; background:#fef3c7; border-left:3px solid #f59e0b;
+                      padding:0.5rem 0.75rem; border-radius:6px; margin-bottom:1rem;">
+                Há um torneio em andamento. Criar um novo o tornará o ativo — o atual fica salvo na lista
+                e pode ser retomado depois.
+            </p>
+        {% endif %}
 
         {% if times | length < 2 %}
             <p style="color:#9ca3af; font-size:0.9rem;">
@@ -208,11 +234,28 @@
             </form>
         {% endif %}
     </div>
-    {% endif %}{# fim: not torneio_ativo #}
-
-{% endif %}{# fim: not campeao #}
 
 <script>
+const TIMES_ATIVOS = {{ (torneio_ativo.times if torneio_ativo else []) | tojson }};
+
+// Reinicia "com novos times": pré-marca os times do torneio atual no formulário
+// "Novo Torneio" e rola até ele, permitindo adicionar/remover antes de criar.
+function reiniciarComNovosTimes() {
+    const form = document.getElementById('form-gerar');
+    if (!form) {
+        alert('Cadastre ao menos 2 times para montar um novo torneio.');
+        return;
+    }
+    const alvo = new Set(TIMES_ATIVOS);
+    document.querySelectorAll('input[name="times_selecionados"]').forEach(c => {
+        c.checked = alvo.has(c.value);
+    });
+    atualizarSelecao();
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const nome = document.getElementById('nome_torneio');
+    if (nome) { nome.focus(); }
+}
+
 function atualizarSelecao() {
     const checks = document.querySelectorAll('input[name="times_selecionados"]');
     const selecionados = [...checks].filter(c => c.checked);

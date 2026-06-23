@@ -95,6 +95,9 @@ def registrar_partida():
         return redirect(url_for("pagina_partidas", msg="Erro: gols devem ser números inteiros.", tipo="erro"))
 
     ctx = torneios.contexto_partida(time1, time2)
+    if ctx["status"] == 1:
+        return redirect(url_for("pagina_partidas",
+            msg="Registre apenas confrontos da rodada atual do torneio ativo.", tipo="erro"))
     torneio_id, rodada = ctx["dados"]
 
     resultado = partidas.registrar(time1, time2, gols1, gols2, rodada, torneio_id)
@@ -144,8 +147,8 @@ def gerar_confrontos():
 
 @app.route("/torneio/ativar/<torneio_id>", methods=["POST"])
 def ativar_torneio(torneio_id):
-    torneios.set_ativo(torneio_id)
-    return redirect(url_for("pagina_torneio"))
+    r = torneios.set_ativo(torneio_id)
+    return redirect(url_for("pagina_torneio", msg=r["mensagem"], tipo="sucesso" if r["status"] == 0 else "erro"))
 
 
 @app.route("/torneio/avancar", methods=["POST"])
@@ -154,8 +157,8 @@ def avancar_fase():
     if pendentes:
         return redirect(url_for("pagina_torneio",
             msg="Registre os resultados de todas as partidas na página de Partidas antes de avançar.", tipo="erro"))
-    torneios.avancar()
-    return redirect(url_for("pagina_torneio"))
+    r = torneios.avancar()
+    return redirect(url_for("pagina_torneio", msg=r["mensagem"], tipo="sucesso" if r["status"] == 0 else "erro"))
 
 
 @app.route("/torneio/reiniciar", methods=["POST"])

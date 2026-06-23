@@ -1,5 +1,10 @@
-import sys, os; sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+import sys, os, tempfile; sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import torneios, partidas
+
+# Isolamento: os testes NUNCA devem escrever nos arquivos reais de dados/.
+# Redireciona a persistência de cada módulo para arquivos temporários.
+torneios._ARQUIVO = os.path.join(tempfile.gettempdir(), "test_torneio_data.json")
+partidas._ARQUIVO = os.path.join(tempfile.gettempdir(), "test_partidas_data.json")
 
 resultados = []
 
@@ -49,6 +54,21 @@ def teste_criar_menos_de_dois_times():
     r = torneios.criar("Pequeno", ["A"])
     passou = r["status"] == 1 and "Erro" in r["mensagem"]
     registrar("criar: menos de 2 times retorna status 1 com mensagem de erro", passou, str(r))
+
+
+def teste_criar_times_repetidos():
+    resetar_estado()
+    r = torneios.criar("Repetido", ["A", "A"])
+    passou = r["status"] == 1 and "Erro" in r["mensagem"]
+    registrar("criar: times repetidos retorna status 1 (time não joga contra si mesmo)", passou, str(r))
+
+
+def teste_criar_times_repetidos_espaco_interno():
+    # 'Time A' e 'Time  A' (espaço duplo) devem ser tratados como o mesmo time.
+    resetar_estado()
+    r = torneios.criar("EspacoTime", ["Time A", "Time  A", "Time B", "Time C"])
+    passou = r["status"] == 1 and "repetid" in r["mensagem"].lower()
+    registrar("criar: times iguais com espaços internos diferentes são repetidos", passou, str(r))
 
 
 def teste_listar_retorna_todos_os_torneios():
@@ -298,6 +318,21 @@ def teste_avancar_sem_torneio_ativo_retorna_status_um():
     registrar("avancar: sem torneio ativo retorna status 1", passou, str(r))
 
 
+def teste_avancar_apos_campeao_bloqueia():
+    # Após declarar campeão, chamar avancar() de novo não deve incrementar rodada.
+    resetar_estado()
+    t = torneios.criar("Encerrado", ["A", "B"])
+    tid = t["dados"]["id"]
+    c = torneios.get_ativo()["dados"]["confrontos"][0]
+    partidas.registrar(c[0], c[1], 2, 0, rodada=1, torneio_id=tid)
+    torneios.avancar()  # define campeão
+    rodada_antes = torneios.get_ativo()["dados"]["rodada"]
+    r = torneios.avancar()  # não deve fazer nada
+    rodada_depois = torneios.get_ativo()["dados"]["rodada"]
+    passou = r["status"] == 1 and "encerrado" in r["mensagem"].lower() and rodada_antes == rodada_depois
+    registrar("avancar: após campeão retorna status 1 e não incrementa rodada", passou, str(r))
+
+
 def teste_avancar_define_campeao():
     resetar_estado()
     t = torneios.criar("Final", ["A", "B"])
@@ -328,6 +363,143 @@ def teste_avancar_proxima_rodada():
               str(ativo["rodada"] if ativo else None))
 
 
+def teste_avancar_impar_da_bye_sem_descartar():
+    # 6 times, todos com vencedor -> 3 classificados (ímpar): 1 fica aguardando (bye),
+    # 2 jogam. Nenhum time pode ser descartado.
+    resetar_estado()
+    t = torneios.criar("Bye", ["A", "B", "C", "D", "E", "F"])
+    ativo = torneios.get_ativo()["dados"]
+    for c in ativo["confrontos"]:
+        partidas.registrar(c[0], c[1], 3, 1, rodada=1, torneio_id=t["dados"]["id"])
+    r = torneios.avancar()
+    ativo = torneios.get_ativo()["dados"]
+    em_confronto = [time for c in ativo["confrontos"] for time in c]
+    vivos = em_confronto + ativo["aguardando"]
+    passou = (
+        r["status"] == 0
+        and len(ativo["aguardando"]) == 1
+        and len(ativo["confrontos"]) == 1
+        and len(vivos) == 3          # 3 classificados continuam vivos
+        and len(set(vivos)) == 3     # nenhum repetido
+    )
+    registrar("avancar: nº ímpar de classificados gera bye e não descarta ninguém", passou, str(r))
+
+
+def teste_avancar_reincorpora_bye():
+    # Após a rodada com bye, o time de bye volta a disputar.
+    resetar_estado()
+    t = torneios.criar("ByeVolta", ["A", "B", "C", "D", "E", "F"])
+    tid = t["dados"]["id"]
+    ativo = torneios.get_ativo()["dados"]
+    for c in ativo["confrontos"]:
+        partidas.registrar(c[0], c[1], 3, 1, rodada=1, torneio_id=tid)
+    torneios.avancar()
+    ativo = torneios.get_ativo()["dados"]
+    bye_anterior = ativo["aguardando"][0] if ativo["aguardando"] else None
+    for c in ativo["confrontos"]:
+        partidas.registrar(c[0], c[1], 2, 0, rodada=ativo["rodada"], torneio_id=tid)
+    torneios.avancar()
+    ativo = torneios.get_ativo()["dados"]
+    em_jogo = [time for c in ativo["confrontos"] for time in c]
+    passou = (ativo["campeao"] is not None) or (bye_anterior in em_jogo)
+    registrar("avancar: o time de bye é reincorporado na rodada seguinte", passou,
+              f"bye={bye_anterior}, em_jogo={em_jogo}, campeao={ativo['campeao']}")
+
+
+# --- desempate (semifinal em diante) ---
+
+def teste_desempate_semifinal_empate_gera_replay():
+    # Semifinal (4 times): um confronto empata -> desempate (2º jogo) dos mesmos times;
+    # o confronto já decidido fica aguardando.
+    resetar_estado()
+    t = torneios.criar("Semi4", ["A", "B", "C", "D"])
+    tid = t["dados"]["id"]
+    ativo = torneios.get_ativo()["dados"]
+    c_empate = ativo["confrontos"][0]
+    c_decide = ativo["confrontos"][1]
+    partidas.registrar(c_empate[0], c_empate[1], 1, 1, rodada=1, torneio_id=tid)
+    partidas.registrar(c_decide[0], c_decide[1], 2, 0, rodada=1, torneio_id=tid)
+    r = torneios.avancar()
+    ativo = torneios.get_ativo()["dados"]
+    replay = ativo["confrontos"][0] if ativo["confrontos"] else ()
+    passou = (
+        r["status"] == 0
+        and ativo["desempate"] is True
+        and ativo["campeao"] is None
+        and len(ativo["confrontos"]) == 1
+        and set(replay) == set(c_empate)        # mesmos times do empate
+        and c_decide[0] in ativo["aguardando"]  # vencedor já decidido aguarda
+    )
+    registrar("desempate: empate na semifinal gera replay dos mesmos times", passou, str(r))
+
+
+def teste_desempate_replay_decidido_avanca():
+    # Após o replay com vencedor, o vencedor do desempate junta-se a quem aguardava (a final).
+    resetar_estado()
+    t = torneios.criar("Semi4b", ["A", "B", "C", "D"])
+    tid = t["dados"]["id"]
+    ativo = torneios.get_ativo()["dados"]
+    c_empate = ativo["confrontos"][0]
+    c_decide = ativo["confrontos"][1]
+    partidas.registrar(c_empate[0], c_empate[1], 1, 1, rodada=1, torneio_id=tid)
+    partidas.registrar(c_decide[0], c_decide[1], 2, 0, rodada=1, torneio_id=tid)
+    torneios.avancar()  # entra no desempate
+    ativo = torneios.get_ativo()["dados"]
+    rep = ativo["confrontos"][0]
+    partidas.registrar(rep[0], rep[1], 3, 1, rodada=ativo["rodada"], torneio_id=tid)
+    r = torneios.avancar()  # resolve o desempate -> final
+    ativo = torneios.get_ativo()["dados"]
+    em_jogo = [x for c in ativo["confrontos"] for x in c]
+    passou = (
+        r["status"] == 0
+        and ativo["desempate"] is False
+        and ativo["campeao"] is None
+        and len(ativo["confrontos"]) == 1   # a final
+        and rep[0] in em_jogo               # vencedor do replay
+        and c_decide[0] in em_jogo          # quem aguardava
+    )
+    registrar("desempate: replay decidido avança o vencedor para a final", passou, str(r))
+
+
+def teste_empate_fase_inicial_ambos_avancam():
+    # 8 times (quartas): empate ainda avança os dois (regra do slide), sem desempate.
+    resetar_estado()
+    t = torneios.criar("Oito", ["A", "B", "C", "D", "E", "F", "G", "H"])
+    tid = t["dados"]["id"]
+    ativo = torneios.get_ativo()["dados"]
+    for c in ativo["confrontos"]:
+        partidas.registrar(c[0], c[1], 1, 1, rodada=1, torneio_id=tid)
+    r = torneios.avancar()
+    ativo = torneios.get_ativo()["dados"]
+    vivos = [x for c in ativo["confrontos"] for x in c] + ativo["aguardando"]
+    passou = (
+        r["status"] == 0
+        and ativo["desempate"] is False
+        and len(set(vivos)) == 8   # todos os 8 seguem
+    )
+    registrar("empate em fase inicial (8 times): ambos avançam, sem desempate", passou, str(r))
+
+
+def teste_desempate_final_ate_campeao():
+    # Final (2 times) empata -> rejoga; no jogo decisivo, define campeão.
+    resetar_estado()
+    t = torneios.criar("Final2", ["A", "B"])
+    tid = t["dados"]["id"]
+    ativo = torneios.get_ativo()["dados"]
+    c = ativo["confrontos"][0]
+    partidas.registrar(c[0], c[1], 0, 0, rodada=1, torneio_id=tid)  # empate na final
+    torneios.avancar()  # desempate
+    ativo = torneios.get_ativo()["dados"]
+    desempatou = ativo["desempate"] is True and ativo["campeao"] is None
+    rep = ativo["confrontos"][0]
+    partidas.registrar(rep[0], rep[1], 2, 1, rodada=ativo["rodada"], torneio_id=tid)
+    torneios.avancar()  # jogo decisivo
+    ativo = torneios.get_ativo()["dados"]
+    passou = desempatou and ativo["campeao"] == rep[0]
+    registrar("desempate: final empatada rejoga e define campeão no jogo decisivo", passou,
+              f"campeao={ativo['campeao']}")
+
+
 # --- resetar ---
 
 def teste_resetar_remove_todos_torneios():
@@ -339,6 +511,88 @@ def teste_resetar_remove_todos_torneios():
     registrar("resetar: remove todos os torneios e limpa o ativo", passou, str(r))
 
 
+# --- cobertura de branches adicionais ---
+
+def teste_criar_nome_duplicado():
+    resetar_estado()
+    torneios.criar("Mesmo Nome", ["A", "B"])
+    r = torneios.criar("mesmo nome", ["C", "D"])  # case-insensitive
+    passou = r["status"] == 1 and "já existe" in r["mensagem"]
+    registrar("criar: nome de torneio duplicado retorna status 1", passou, str(r))
+
+
+def teste_criar_nome_duplicado_espaco_interno():
+    # 'Copa 2025' e 'Copa  2025' (espaço duplo) devem colidir.
+    resetar_estado()
+    torneios.criar("Copa 2025", ["A", "B"])
+    r = torneios.criar("Copa  2025", ["C", "D"])
+    passou = r["status"] == 1 and "já existe" in r["mensagem"]
+    registrar("criar: nome de torneio com espaços internos diferentes colide", passou, str(r))
+
+
+def teste_desativar_sem_ativo():
+    resetar_estado()
+    r = torneios.desativar()
+    passou = r["status"] == 1 and r["dados"] is None
+    registrar("desativar: sem torneio ativo retorna status 1", passou, str(r))
+
+
+def teste_avancar_com_pendentes_bloqueia():
+    resetar_estado()
+    torneios.criar("Pendente", ["A", "B"])
+    r = torneios.avancar()  # nenhuma partida registrada -> confronto pendente
+    passou = r["status"] == 1 and "pendente" in r["mensagem"]
+    registrar("avancar: com confronto pendente retorna status 1", passou, str(r))
+
+
+def teste_avancar_time2_vence():
+    # Garante o ramo em que o segundo time do confronto vence (gols invertidos).
+    resetar_estado()
+    t = torneios.criar("Time2", ["A", "B"])
+    tid = t["dados"]["id"]
+    c = torneios.get_ativo()["dados"]["confrontos"][0]
+    partidas.registrar(c[0], c[1], 0, 3, rodada=1, torneio_id=tid)  # vence c[1]
+    torneios.avancar()
+    ativo = torneios.get_ativo()["dados"]
+    passou = ativo["campeao"] == c[1]
+    registrar("avancar: vitória do segundo time classifica c[1]", passou, str(ativo["campeao"]))
+
+
+def teste_resultado_do_confronto_sem_partida():
+    passou = torneios._resultado_do_confronto(("X", "Y"), []) is None
+    registrar("_resultado_do_confronto: sem partida correspondente retorna None", passou)
+
+
+def teste_avancar_compat_bye_legado():
+    # Dados antigos usavam o campo "bye" (string). avancar() deve reincorporá-lo.
+    resetar_estado()
+    torneios._torneios.append({
+        "id": "99", "nome": "Legado", "times": ["A", "B", "C"],
+        "rodada": 1, "campeao": None, "bye": "C", "confrontos": [("A", "B")],
+    })
+    torneios._torneio_ativo_id = "99"
+    partidas.registrar("A", "B", 2, 0, rodada=1, torneio_id="99")
+    torneios.avancar()
+    ativo = torneios.get_ativo()["dados"]
+    em_jogo = [x for c in ativo["confrontos"] for x in c]
+    passou = (ativo.get("bye") in (None, "")) and "C" in em_jogo and "A" in em_jogo
+    registrar("avancar: compatível com campo 'bye' legado (reincorpora o time)", passou,
+              f"em_jogo={em_jogo}")
+
+
+def teste_inicializar_arquivo_inexistente():
+    # Aponta _ARQUIVO para um caminho inexistente para exercitar o ramo de
+    # "arquivo não encontrado" (status 1).
+    original = torneios._ARQUIVO
+    torneios._ARQUIVO = os.path.join(os.path.dirname(__file__), "__nao_existe__.json")
+    try:
+        r = torneios.inicializar()
+        passou = r["status"] == 1 and "não encontrado" in r["mensagem"]
+    finally:
+        torneios._ARQUIVO = original
+    registrar("inicializar: arquivo inexistente retorna status 1", passou, str(r))
+
+
 # --- execução ---
 
 def executar_testes():
@@ -347,6 +601,7 @@ def executar_testes():
         teste_criar_nome_vazio_recebe_nome_padrao,
         teste_criar_numero_impar_de_times,
         teste_criar_menos_de_dois_times,
+        teste_criar_times_repetidos,
         teste_listar_retorna_todos_os_torneios,
         teste_listar_vazio,
         teste_criar_define_torneio_como_ativo,
@@ -365,9 +620,25 @@ def executar_testes():
         teste_resetar_ativo_reinicia_torneio,
         teste_resetar_ativo_sem_ativo_retorna_status_um,
         teste_avancar_sem_torneio_ativo_retorna_status_um,
+        teste_avancar_apos_campeao_bloqueia,
         teste_avancar_define_campeao,
         teste_avancar_proxima_rodada,
+        teste_avancar_impar_da_bye_sem_descartar,
+        teste_avancar_reincorpora_bye,
+        teste_desempate_semifinal_empate_gera_replay,
+        teste_desempate_replay_decidido_avanca,
+        teste_empate_fase_inicial_ambos_avancam,
+        teste_desempate_final_ate_campeao,
         teste_resetar_remove_todos_torneios,
+        teste_criar_nome_duplicado,
+        teste_criar_times_repetidos_espaco_interno,
+        teste_criar_nome_duplicado_espaco_interno,
+        teste_desativar_sem_ativo,
+        teste_avancar_com_pendentes_bloqueia,
+        teste_avancar_time2_vence,
+        teste_resultado_do_confronto_sem_partida,
+        teste_avancar_compat_bye_legado,
+        teste_inicializar_arquivo_inexistente,
         teste_inicializar_retorna_dict,
         teste_salvar_retorna_status_zero,
         teste_get_ativo_retorna_dados_quando_ativo,
