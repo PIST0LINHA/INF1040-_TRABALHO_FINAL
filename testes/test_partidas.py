@@ -2,7 +2,7 @@ import sys, os, tempfile; sys.path.insert(0, os.path.join(os.path.dirname(__file
 import partidas
 
 # Isolamento: testes nunca escrevem nos arquivos reais de dados/.
-partidas._ARQUIVO = os.path.join(tempfile.gettempdir(), "test_partidas_data.json")
+partidas._ARQUIVO = os.path.join(tempfile.mkdtemp(), "partidas_data.json")
 
 resultados = []
 

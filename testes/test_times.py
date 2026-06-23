@@ -2,7 +2,7 @@ import sys, os, tempfile; sys.path.insert(0, os.path.join(os.path.dirname(__file
 import times
 
 # Isolamento: testes nunca escrevem nos arquivos reais de dados/.
-times._ARQUIVO = os.path.join(tempfile.gettempdir(), "test_times_data.json")
+times._ARQUIVO = os.path.join(tempfile.mkdtemp(), "times_data.json")
 
 resultados = []
 

@@ -3,8 +3,8 @@ import torneios, partidas
 
 # Isolamento: os testes NUNCA devem escrever nos arquivos reais de dados/.
 # Redireciona a persistência de cada módulo para arquivos temporários.
-torneios._ARQUIVO = os.path.join(tempfile.gettempdir(), "test_torneio_data.json")
-partidas._ARQUIVO = os.path.join(tempfile.gettempdir(), "test_partidas_data.json")
+torneios._ARQUIVO = os.path.join(tempfile.mkdtemp(), "torneio_data.json")
+partidas._ARQUIVO = os.path.join(tempfile.mkdtemp(), "partidas_data.json")
 
 resultados = []
 

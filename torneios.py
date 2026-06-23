@@ -369,10 +369,11 @@ def set_ativo(torneio_id: str) -> dict:
         nenhuma
     """
     global _torneio_ativo_id
-    if _get_torneio(torneio_id) is None:
+    t = _get_torneio(torneio_id)
+    if t is None:
         return {"status": 1, "mensagem": f"Erro: torneio com ID '{torneio_id}' não encontrado.", "dados": None}
     _torneio_ativo_id = torneio_id
-    return {"status": 0, "mensagem": f"Torneio '{torneio_id}' definido como ativo.", "dados": None}
+    return {"status": 0, "mensagem": f"Torneio '{t['nome']}' definido como ativo.", "dados": None}
 
 
 def desativar() -> dict:
